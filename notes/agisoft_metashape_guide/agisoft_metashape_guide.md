@@ -23,11 +23,25 @@ Metashape follows the Sfm based approach:
 * Reconstruction. Dense point cloud can be built based on the estimated camera positions and images themselves (dense stereo matching). 
 * Create georeferenced orthomosaic (interactive drone map). Not for our purpose.
 
-The basic workflow is Add photos -- Align photos -- Build Dense Cloud -- Build Mesh -- Build Texture.
+The basic workflow is:
+
+* Add Chunks --> Add Photos
+* Import Masks --> Align Photos
+* Manually add markers
+* Align Chunks ->- Merge Chunks
+* (now on the merged chunk) Build Dense Cloud (this step can be omitted since build mesh can be based on depth maps)
+* Build Mesh --> Build Texture
+* Tools -- Mesh -- Generate Masks
+* File -- Export -- Export Model/Masks/Texture
+* For scaling: manually add markers --> Tools -- Mesh -- Measure Volume and Area
 
 ![image-20210410204031024](figs/image-20210410204031024.png)
 
-Details can be found in the  [manual](./metashape_manual_1.7.pdf).
+Details can be found in the  [manual](./metashape_manual_1.7.pdf). For output, we can export the model and the texture map, etc.
+
+In workflow, I created template batch process for new data. Add photos --> Batch order 1&2 (import mask & align photo). Note there is a bug in Metashape, every time we load the batch.xml file, we need to change the order 1 from generate masks to import masks, and select the right folder -->manually label object and background markers on chunk 1, specify scale bar, and label object markers on chunk 2 --> Batch order 3 & 4 (align and merge chunks) --> specify "merged chunk" in Batch order 5 & 6 & 7 (build mesh and texture) --> Read volume and output.
+
+![image-20210417170559521](figs/image-20210417170559521.png)
 
 ## Image Capture
 
@@ -36,6 +50,8 @@ Photographs suitable for 3D model reconstruction in Metashape can be taken by an
 * Use a digital camera with reasonably high resolution (5 MPix or more).
 * Avoid ultra-wide angle and fisheye lenses. The best choice is 50 mm focal length (35 mm film equivalent) lenses. It is recommended to use focal length from 20 to 80 mm interval in 35mm equivalent. If a data set was captured with fisheye lens, appropriate camera sensor type should be selected in Metashape Camera Calibration dialog prior to processing.
 * Fixed lenses are preferred. If zoom lenses are used - focal length should be set either to maximal or to minimal value during the entire shooting session for more stable results, for intermediate focal lengths separate camera calibration groups should be used.
+
+In my setup, I am using ProCamera app on iPhone XR as the automatic shutter trigger, 30 consecutive shots with a 2-second interval for one surface of the rock.
 
 ## All-around Scan
 
