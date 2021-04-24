@@ -174,7 +174,7 @@ def main():
 
         if (epoch + 1) % save_epoch_frq == 0:
             torch.save(net.state_dict(), model_dir + model_name+"_epoch_%d.pth" % (epoch+1))
-            net.train()  # resume train
+            net.train()  # resume training
             
 if __name__ == '__main__':
     main() # on Windows, if not wrapped in main(), can use multi-workers for dataloader!!!
