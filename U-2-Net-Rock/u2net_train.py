@@ -63,7 +63,7 @@ def main():
     model_dir = os.path.join(os.getcwd(), 'saved_models', model_name + os.sep)
 
     epoch_num = 100#100000
-    batch_size_train = 8
+    batch_size_train = 8 #12
     batch_size_val = 1
     train_num = 0
     val_num = 0
@@ -96,7 +96,7 @@ def main():
             RescaleT(320),
             RandomCrop(288),
             ToTensorLab(flag=0)]))
-    salobj_dataloader = DataLoader(salobj_dataset, batch_size=batch_size_train, shuffle=True, num_workers=2)
+    salobj_dataloader = DataLoader(salobj_dataset, batch_size=batch_size_train, shuffle=True, num_workers=16)
 
     # ------- 3. define model --------
     # define the net
@@ -122,7 +122,7 @@ def main():
     running_loss = 0.0
     running_tar_loss = 0.0
     ite_num4val = 0
-    #save_frq = 2000 # save the model every 2000 iterations
+    save_frq = 2000 # save the model every 2000 iterations
     save_epoch_frq = 10 # save the model every 10 epochs
 
     for epoch in range(0, epoch_num):
@@ -165,13 +165,16 @@ def main():
             print("[epoch: %3d/%3d, batch: %5d/%5d, ite: %d] train loss: %3f, tar: %3f " % (
             epoch + 1, epoch_num, (i + 1) * batch_size_train, train_num, ite_num, running_loss / ite_num4val, running_tar_loss / ite_num4val))
 
-            #if ite_num % save_frq == 0:
-            if (epoch + 1) % save_epoch_frq == 0:
-                torch.save(net.state_dict(), model_dir + model_name+"_bce_itr_%d_train_%3f_tar_%3f.pth" % (ite_num, running_loss / ite_num4val, running_tar_loss / ite_num4val))
+            if ite_num % save_frq == 0:
+                #torch.save(net.state_dict(), model_dir + model_name+"_bce_itr_%d_train_%3f_tar_%3f.pth" % (ite_num, running_loss / ite_num4val, running_tar_loss / ite_num4val))
                 running_loss = 0.0
                 running_tar_loss = 0.0
                 net.train()  # resume train
                 ite_num4val = 0
+
+        if (epoch + 1) % save_epoch_frq == 0:
+            torch.save(net.state_dict(), model_dir + model_name+"_epoch_%d.pth" % (epoch+1))
+            net.train()  # resume train
             
 if __name__ == '__main__':
     main() # on Windows, if not wrapped in main(), can use multi-workers for dataloader!!!
