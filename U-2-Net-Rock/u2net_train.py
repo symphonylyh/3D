@@ -49,7 +49,7 @@ def main():
 
     # ------- 2. set the directory of training dataset --------
 
-    model_name = 'u2net_rock' # 'u2net', 'u2netp'
+    model_name = 'u2net' #'u2netp'
 
     data_dir = os.path.join(os.getcwd(), 'train_data' + os.sep)
     #tra_image_dir = os.path.join('DUTS', 'DUTS-TR', 'DUTS-TR', 'im_aug' + os.sep)
@@ -57,13 +57,13 @@ def main():
     tra_image_dir = os.path.join('ROCK', 'images' + os.sep)
     tra_label_dir = os.path.join('ROCK', 'masks' + os.sep)
 
-    image_ext = '.jpg'
+    image_ext = '.JPG'
     label_ext = '.png'
 
     model_dir = os.path.join(os.getcwd(), 'saved_models', model_name + os.sep)
 
     epoch_num = 100#100000
-    batch_size_train = 12
+    batch_size_train = 8
     batch_size_val = 1
     train_num = 0
     val_num = 0
@@ -104,8 +104,6 @@ def main():
         net = U2NET(3, 1)
     elif(model_name=='u2netp'):
         net = U2NETP(3,1)
-    elif(model_name=='u2net_rock'):
-        net = U2NET(3, 1)
 
     # resume training from saved model
     #net.load_state_dict(torch.load(saved_model_dir))
