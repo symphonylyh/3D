@@ -27,6 +27,9 @@ from model import U2NETP
 import time
 
 def main():
+
+    RESUME = False
+
     # ------- 1. define loss function --------
 
     bce_loss = nn.BCELoss(size_average=True)
@@ -96,7 +99,7 @@ def main():
             RescaleT(320),
             RandomCrop(288),
             ToTensorLab(flag=0)]))
-    salobj_dataloader = DataLoader(salobj_dataset, batch_size=batch_size_train, shuffle=True, num_workers=16)
+    salobj_dataloader = DataLoader(salobj_dataset, batch_size=batch_size_train, shuffle=True, num_workers=16, persistent_workers=True)
 
     # ------- 3. define model --------
     # define the net
@@ -105,9 +108,6 @@ def main():
     elif(model_name=='u2netp'):
         net = U2NETP(3,1)
 
-    # resume training from saved model
-    #net.load_state_dict(torch.load(saved_model_dir))
-
     if torch.cuda.is_available():
         print('CUDA available')
         net.cuda()
@@ -115,6 +115,14 @@ def main():
     # ------- 4. define optimizer --------
     print("---define optimizer...")
     optimizer = optim.Adam(net.parameters(), lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
+
+    # ------- resume training if needed ----
+    checkpoint_path = model_dir + model_name+"_epoch_1.pth"
+    if RESUME:
+        start_epoch = load_ckpt(net, optimizer, checkpoint_path)
+    else:
+        start_epoch = 0
+    print("Starting from epoch {}".format(start_epoch))
 
     # ------- 5. training process --------
     print("---start training...")
@@ -125,7 +133,7 @@ def main():
     save_frq = 2000 # save the model every 2000 iterations
     save_epoch_frq = 10 # save the model every 10 epochs
 
-    for epoch in range(0, epoch_num):
+    for epoch in range(start_epoch, epoch_num):
         net.train()
 
         for i, data in enumerate(salobj_dataloader):
@@ -173,8 +181,24 @@ def main():
                 ite_num4val = 0
 
         if (epoch + 1) % save_epoch_frq == 0:
-            torch.save(net.state_dict(), model_dir + model_name+"_epoch_%d.pth" % (epoch+1))
+            checkpoint = {
+                'epoch': epoch + 1, # epoch is completed, should start from epoch+1 later on
+                'state_dict': net.state_dict(),
+                'optimizer': optimizer.state_dict()
+            }
+            checkpoint_path = model_dir + model_name+"_epoch_%d.pth" % (epoch+1)
+            print("Saving model checkpoint...")
+            save_ckpt(checkpoint, checkpoint_path)
             net.train()  # resume training
-            
+
+def save_ckpt(state, checkpoint_path):
+    torch.save(state, checkpoint_path)
+
+def load_ckpt(model, optimizer, checkpoint_path): # model, optimizer, scheduler are global variables
+    checkpoint = torch.load(checkpoint_path)
+    model.load_state_dict(checkpoint['state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer'])
+    return checkpoint['epoch']
+
 if __name__ == '__main__':
     main() # on Windows, if not wrapped in main(), can use multi-workers for dataloader!!!
