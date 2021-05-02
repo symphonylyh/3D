@@ -191,6 +191,9 @@ def main():
             save_ckpt(checkpoint, checkpoint_path)
             net.train()  # resume training
 
+        if (epoch + 1) == epoch_num:
+            torch.save(net.state_dict(), model_dir + model_name + os.sep + 'u2net_rock.pth') # final model should be saved without optimizer
+
 def save_ckpt(state, checkpoint_path):
     torch.save(state, checkpoint_path)
 

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<batchjobs version="1.7.0">
+  <job name="GenerateMasks" enabled="false" target="list" chunks="0;1">
+    <masking_mode>1</masking_mode>
+    <path>H:/RockScan/RR3/31/masks/{filename}.png</path>
+    <tolerance>40</tolerance>
+  </job>
+  <job name="AlignPhotos" enabled="false" target="list" chunks="0;1">
+    <filter_mask>true</filter_mask>
+    <filter_stationary_points>false</filter_stationary_points>
+    <mask_tiepoints>false</mask_tiepoints>
+  </job>
+  <job name="AlignChunks" enabled="false" target="list" chunks="0;1">
+    <chunks>0;1</chunks>
+    <method>1</method>
+  </job>
+  <job name="MergeChunks" enabled="false" target="list" chunks="0;1">
+    <chunks>0;1</chunks>
+    <merge_markers>true</merge_markers>
+  </job>
+  <job name="BuildModel" target="list" chunks="2">
+    <downscale>2</downscale>
+    <reuse_depth>true</reuse_depth>
+    <source_data>6</source_data>
+  </job>
+  <job name="BuildTexture" target="list" chunks="2"/>
+  <job name="GenerateMasks" target="list" chunks="2">
+    <masking_mode>3</masking_mode>
+  </job>
+</batchjobs>

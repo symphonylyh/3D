@@ -1,6 +1,6 @@
 My Modifications (04/2021):
 
-In my application, I trained [U2-Net](https://github.com/xuebinqin/U-2-Net) for the rock detection purpose. My rock images and masks dataset is avaiable at [link](https://uofi.box.com/v/u2net-rock-dataset). Currently it has 2349 image-mask pairs from multi-view of 40 rocks. Please download the dataset and place it under `train_data/`.
+In my application, I trained [U2-Net](https://github.com/xuebinqin/U-2-Net) for the rock detection purpose. My rock images and masks dataset is available at [link](https://uofi.box.com/v/u2net-rock-dataset). Currently it has 2349 image-mask pairs from multi-view of 40 rocks. Please download the dataset and place it under `train_data/`.
 
 Two modified files are `u2net_test.py` and `u2net_train.py`. 
 
@@ -8,11 +8,11 @@ In the train script:
 * Specified the model name as `u2net_rock` (the same architecture as U2NET full) and the training directory. 
 * Added resume training option. 
 * Changed model saving option to epoch-based.
-* Epoch number is reduced to 1000.
+* Epoch number is reduced to 100.
 * Wrapped the code into one `main()` for PyTorch multi-processing dataloader to work on Windows.
 
 In the test script:
-* My trained model is available at [link](). Download and place it under `saved_models/u2net/` for U2NET architecture or `saved_models/u2netp/` for U2NETP architecture.
+* My trained model (for 100 epochs) is available at [link](https://uofi.box.com/v/u2net-rock-model). Download and place it under `saved_models/u2net/` for U2NET architecture or `saved_models/u2netp/` for U2NETP architecture.
 * Added options to save masked image and montage image and GIF generation.
 * Added options to inference on all images contained in a list of folders.
 

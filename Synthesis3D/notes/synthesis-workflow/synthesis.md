@@ -1,5 +1,7 @@
 [TOC]
 
+This section is after the [3D reconstruction section](../../../Reconstruction3D/notes/agisoft	_metashape_guide/agisoft_metashape_guide.md).
+
 As the preparation steps for 3D synthetic data generation in Unity, the following major tasks are necessary:
 
 * Step 1: Export Reconstructed Rock Models (Metashape)
@@ -54,3 +56,4 @@ Blender tips:
 ![image-20210425003648458](figs/image-20210425003648458.png)
 
 ## Import to Unity
+
