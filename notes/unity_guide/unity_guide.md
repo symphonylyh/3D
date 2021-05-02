@@ -24,17 +24,17 @@ Right click this to change projection from **orthographic** to **perspective**, 
 
 ![scene-gizmo](./figs/scene-gizmo.png)
 
-| Action      | Shortcuts (Mac)                                              |
-| ----------- | ------------------------------------------------------------ |
-| Hand tool   | Q                                                            |
-| Move tool   | W, click the object, you can move along X/Y/Z axis           |
-| Rotate tool | E, click the object, you can rotate along X/Y/Z axis         |
-| Scale tool  | R, click the object, drag the center cude to scale uniformly |
-| Pan         | Option/Alt + Cmd + drag                                      |
-| Orbit       | Option/Alt + drag                                            |
-| Zoom        | Two fingers up & down                                        |
-| Focus       | Select an object, press F                                    |
-| Flythrough  | Two fingers pressed, WASDQE to move, Shift to faster         |
+| Action      | Shortcuts (Mac)                                              | Shortcuts (Win)       |
+| ----------- | ------------------------------------------------------------ | --------------------- |
+| Hand tool   | Q                                                            | same                  |
+| Move tool   | W, click the object, you can move along X/Y/Z axis           | same                  |
+| Rotate tool | E, click the object, you can rotate along X/Y/Z axis         | same                  |
+| Scale tool  | R, click the object, drag the center cube to scale uniformly | same                  |
+| Pan         | Option/Alt + Cmd + drag                                      | mid                   |
+| Orbit       | Option/Alt + drag                                            | right                 |
+| Zoom        | Two fingers up & down                                        | scroll                |
+| Focus       | Select an object, press F                                    | same                  |
+| Flythrough  | Two fingers pressed, WASDQE to move, Shift to faster         | right pressed, WASDQE |
 
 #### Level of Details (LOD)
 

@@ -13,7 +13,7 @@ Date: 03/2021
 
 ## Intro
 
-[Agisoft Metashape Professional](https://www.agisoft.com/) is a powerful Structure-from-Motion based 3D reconstruction software that performs photogrammetric processing of digital images. The main differences between Profession version (\$3499) and Standard version (\$179) is the scaling (marker reference), measurement functionalities, and export options.
+[Agisoft Metashape Professional](https://www.agisoft.com/) is a powerful Structure-from-Motion based 3D reconstruction software that performs photogrammetric processing of digital images. The main differences between Profession version (\$3499) and Standard version (\$179) is the scaling (marker reference), measurement functionalities, and export options. Another free and open-source option may be [Meshroom](https://alicevision.org/) for later deployment with IDOT.
 
 The software allows to process images from RGB, thermal or multispectral  cameras, including multi-camera systems, into the spatial  information in the form of dense point clouds, textured polygonal models, or GIS specific format.
 
@@ -42,6 +42,15 @@ Details can be found in the  [manual](./metashape_manual_1.7.pdf). For output, w
 In workflow, I created template batch process for new data. Add photos --> Batch order 1&2 (import mask & align photo). Note there is a bug in Metashape, every time we load the batch.xml file, we need to change the order 1 from generate masks to import masks, and select the right folder -->manually label object and background markers on chunk 1, specify scale bar, and label object markers on chunk 2 --> Batch order 3 & 4 (align and merge chunks) --> specify "merged chunk" in Batch order 5 & 6 & 7 (build mesh and texture) --> Read volume and output.
 
 ![image-20210417170559521](figs/image-20210417170559521.png)
+
+For output, we can export `.fbx` format. It's easier to do that in console, with `Metashape.app.document.chunk.exportModel(path="./models/test.fbx", binary=False, precision=6, texture_format=Metashape.ImageFormatJPEG, save_texture=True, save_uv=True, save_normals=True, save_colors=True, save_cameras=False, save_markers=False, save_udim =False, save_alpha=False, strip_extensions=False, format=Metashape.ModelFormatFBX)`
+
+![image-20210426154606933](figs/image-20210426154606933.png)
+
+Useful tricks if we want more Python in Metashape:
+
+* If we have many project files `.psx` and we want to use an automated Python script to batch process (e.g. export the model from each of the projects). We can either install the [stand-alone Python module from wheel](https://agisoft.freshdesk.com/support/solutions/articles/31000148930-how-to-install-metashape-stand-alone-python-module) (need license activation) OR create an empty main project and execute the script (Tools -- Run script).
+* If we want to include external libraries such as OpenCV and Pytorch, we can use Metashape's pip so the packages will be installed under `C:\Program Files\Agisoft\Metashape Pro\python\Lib\site-packages`. Based on [link](https://agisoft.freshdesk.com/support/solutions/articles/31000136860-how-to-install-external-python-module-to-photoscan-professional-pacakge), we can use `"%programfiles%\Agisoft\Metashape Pro\python\python.exe" -m pip install python_module_name`to install.
 
 ## Image Capture
 
