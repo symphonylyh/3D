@@ -1,10 +1,10 @@
-
+Date: 05/2021
 
 # Synthesis3D Guide
 
 [TOC]
 
-This section is after the [3D reconstruction section](../../../Reconstruction3D/notes/agisoft	_metashape_guide/agisoft_metashape_guide.md).
+This section is after the [3D reconstruction section](../../../Reconstruction3D/notes/agisoft_metashape_guide/agisoft_metashape_guide.md).
 
 As the preparation steps for 3D synthetic data generation in Unity, the following major tasks are necessary:
 
@@ -20,8 +20,6 @@ After the steps above, the synthetic data generation in Unity requires the follo
 * Step 3: Multi-View Image Data Generation by Programming Camera Movement
 * Step 4: 3D Point Cloud Data Generation by Ray Casting
 * Step 5: Export Synthetic Data
-
-
 
 ## Export Reconstructed Rock Models from Metashape
 
