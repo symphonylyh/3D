@@ -53,7 +53,19 @@ To automate everything, three options are available:
 
 The batch processing Python script is [here](../../synthesis-workflow/meshlab_LOD_generation.py).
 
+Another more research-oriented mesh simplification approach would be using [Instant Meshes](https://github.com/wjakob/instant-meshes). The usage can be found [here](https://blender.stackexchange.com/a/108322).
+
 ## Fabricate Level-of-Detail (LOD) Model in Blender
+
+To scripting Blender, two options are available:
+
+* run script in command line. Details description [here](https://docs.blender.org/manual/en/latest/advanced/command_line/arguments.html). First locate the `blender.exe`, then call it by command `blender.exe --background --python test.py [argv...]` then everything will run without GUI.
+
+* `pip install bpy` [link](https://pypi.org/project/bpy/) is available but not officially supported. 
+
+The batch processing Python script is [here](../../synthesis-workflow/blender_entry.py) and [here](../../synthesis-workflow/blender_LOD_merge.py).
+
+To collect all the LOD models to be used as Unity assets, use this [script](../../synthesis-workflow/gather_LODs.py).
 
 Blender tips:
 

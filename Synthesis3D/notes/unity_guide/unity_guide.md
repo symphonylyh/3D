@@ -18,6 +18,23 @@ Next steps:
 * Moving camera, [video](https://www.youtube.com/watch?v=p_4xfhelak8), [video](https://www.youtube.com/watch?v=bbnVpPiQ_rU), [video](https://www.youtube.com/watch?v=iZjnDaabIKU)
 * Mesh to point cloud, [post](https://answers.unity.com/questions/851654/generate-a-point-cloud-from-a-mesh.html), [post](https://stackoverflow.com/questions/33397073/how-to-show-vertices-on-a-cube-when-selected-in-unity-during-runtime)
 
+# VS Code with Unity
+
+See [guide](https://code.visualstudio.com/docs/other/unity). Install ".NET Core SDK" (different from .NET and .NET Framework), Mono stable release (for Mac only). Depending on VS Code error prompt, may need to install .NET Framework 4.7.1 Developer Pack as well, to enable code completion. 
+
+Then install  three VSCode extensions: C# Extension, Debugger for Unity, Unity Tools. Use VS Code as the External Tools for Unity editor.
+
+* IntelliSense: at the beginning IntelliSense doesn't work. Preferences--Settings--search "omnisharp"--section "Omnisharp: Use Global Mono"--change to "Always"--Reload (Mac only)
+
+* Debugger: On the Debugger page in vscode, first time click "create a launch.json" file and select "Unity Debugger". Now you can start the debugger, set breakpoints, etc. For debugging, just go to Unity and start the game, the debugging will start.
+* Interactive debugging: in VS Code debug console (after install Unity Debugger, the console will be next to the terminal console), we can type variable, its fields, etc. Very useful
+
+* Doc: Select a function, `cmd+'` to open Unity doc. Or `cmd+shift+'` to search a certain function name.
+
+# Unity Project Structure
+
+Only the `Assets` and `ProjectSettings` should be kept under source control. Usually we can pack all things in a folder under `Assets/Synthesis3D`. Inside this, we can have `Scenes`, `Scripts` and `Resources`. `Resources` can contain `Meshes`, `Textures`, `Prefabs`, `Materials`, etc.
+
 # Unity3D
 
 Right click this to change projection from **orthographic** to **perspective**, and the common viewing directions.
@@ -35,6 +52,14 @@ Right click this to change projection from **orthographic** to **perspective**, 
 | Zoom        | Two fingers up & down                                        | scroll                |
 | Focus       | Select an object, press F                                    | same                  |
 | Flythrough  | Two fingers pressed, WASDQE to move, Shift to faster         | right pressed, WASDQE |
+
+#### Ambient Light
+
+If the objects show very dark faces, maybe the ambient light should be adjusted. Window -- Rendering -- Lighting settings. Remember to tick the "Auto Generate" to apply the light setting.
+
+#### Prefab vs. Model
+
+Model is just the geometry mesh that the renderer needs. Prefab can contain many other things, such as motion, mesh collider, scripts, etc.
 
 #### Level of Details (LOD)
 
@@ -168,19 +193,6 @@ foreach(var number in GenerateWithYield())
 
 **yield break** will mark the iterator as ended.
 
-
-
-## VSCode with Unity
-
-See [guide](https://code.visualstudio.com/docs/other/unity). Install .NET, Mono stable release, and C# & Debugger for Unity & Unity Tools three extensions.
-
-* IntelliSense: at the beginning IntelliSense doesn't work. Preferences--Settings--search "omnisharp"--section "Omnisharp: Use Global Mono"--change to "Always"--Reload
-
-* Debugger: On the Debugger page in vscode, first time click "create a launch.json" file and select "Unity Debugger". Now you can start the debugger, set breakpoints, and to debug just go to Unity and start the game, the debugging will start.
-* Interactive debugging: in vscode debug console, we can type variable, its fields, etc. Very useful
-
-* Doc: Select a function, `cmd+'` to open Unity doc. Or `cmd+shift+'` to search a certain function name.
-
 # Image Synthesis
 
 * Following this [tutorial](https://www.youtube.com/watch?v=P4CCMvtUohA), Download ImageSynthesis project from this [repo](https://bitbucket.org/Unity-Technologies/ml-imagesynthesis/src/master/).
@@ -192,10 +204,6 @@ See [guide](https://code.visualstudio.com/docs/other/unity). Install .NET, Mono 
 #### Chages made in original ImageSynthesis.cs
 
 * For camera view saving, added the option to save a specific display. See `Save()`
-
-# 3D Reconstruction
-
-
 
 # 3D Segmentation
 
@@ -210,6 +218,3 @@ Synthetic Dataset + Unity3D
 * [tutorial](https://www.youtube.com/watch?v=QxMuWuk_W10): Valohai
 * [tutorial](https://www.bilibili.com/video/av33383354/): Python-Unity
 * [tutorial](https://www.youtube.com/watch?v=ddy12WHqt-M): terrain generation
-
-## 3D Instance Segmentation Networks
-

@@ -1,0 +1,20 @@
+# Blacklist files/folders in same directory as the .gitignore file
+/*
+
+# Whitelist some files
+!.gitignore 
+
+# Ignore all .meta
+**.meta
+
+# Whitelist only /Assets/Synthesis3D/Scripts and /Assets/Synthesis3D/Scenes
+!/Assets/
+/Assets/*
+!/Assets/Synthesis3D/
+/Assets/Synthesis3D/*
+!/Assets/Synthesis3D/Scripts
+!/Assets/Synthesis3D/Scenes
+
+
+
+

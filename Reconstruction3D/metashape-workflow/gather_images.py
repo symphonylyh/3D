@@ -5,7 +5,6 @@ To prepare a more comprehensive training dataset for U2-Net, I need to gather th
 import os
 import shutil
 import glob
-# copy images of all rocks into a folder
 
 root_path = 'H:\RockScan'
 rock_category = 'RR3'
