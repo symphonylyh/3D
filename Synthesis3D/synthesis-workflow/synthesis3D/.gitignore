@@ -7,13 +7,15 @@
 # Ignore all .meta
 **.meta
 
-# Whitelist only /Assets/Synthesis3D/Scripts and /Assets/Synthesis3D/Scenes
+# Whitelist only /Assets/Synthesis3D/[Editor, Scripts, Scenes]
 !/Assets/
 /Assets/*
 !/Assets/Synthesis3D/
 /Assets/Synthesis3D/*
+!/Assets/Synthesis3D/Editor
 !/Assets/Synthesis3D/Scripts
 !/Assets/Synthesis3D/Scenes
+
 
 
 

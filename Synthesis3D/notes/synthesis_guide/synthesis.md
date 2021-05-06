@@ -6,6 +6,8 @@ Date: 05/2021
 
 This section is after the [3D reconstruction section](../../../Reconstruction3D/notes/agisoft_metashape_guide/agisoft_metashape_guide.md).
 
+## Pre-processing in MeshLab and Blender
+
 As the preparation steps for 3D synthetic data generation in Unity, the following major tasks are necessary:
 
 * Step 1: Export Reconstructed Rock Models (Metashape)
@@ -13,15 +15,7 @@ As the preparation steps for 3D synthetic data generation in Unity, the followin
 * Step 3: Fabricate Level-of-Detail (LOD) Model (Blender)
 * Step 4: Import to Unity
 
-After the steps above, the synthetic data generation in Unity requires the following major tasks:
-
-* Step 1: Instantiation of Rock Models
-* Step 2: Stockpile Generation by Gravity Falling
-* Step 3: Multi-View Image Data Generation by Programming Camera Movement
-* Step 4: 3D Point Cloud Data Generation by Ray Casting
-* Step 5: Export Synthetic Data
-
-## Export Reconstructed Rock Models from Metashape
+### Export Reconstructed Rock Models from Metashape
 
 Which data format is the most suitable? The Autodesk FBX file format is a popular 3D data interchange format utilized between 3D editors and graphics engines. Unity generally takes .fbx or .obj as mesh model. MeshLab can import but cannot export .fbx. .fbx model is more compressed than .obj model. As a result, I choose .fbx as the protocol format between Metashap & Meshlab as well as between Blender & Unity, and choose .obj as the protocol format between MeshLab & Blender. 
 
@@ -31,7 +25,7 @@ To export model from Metashape with texture, File -- Export -- Export Model, sav
 
 As a result, for each rock we have a raw `.fbx` model and a `.jpg` texture.
 
-## Mesh Re-centering/Simplification/Downsampling in MeshLab
+### Mesh Re-centering/Simplification/Downsampling in MeshLab
 
 First, after reconstruction, the model is usually with certain offset. It is better to re-center the model to its centroid. This can be done in MeshLab by Filters -- Normals, Curvatures, and Orientation --  Transform: Translate, center, set origin -- Center on Scene/Layer BBox -- Freeze Matrix, as described [here](https://revthat.com/updating-origin-meshes-meshlab/). 
 
@@ -55,7 +49,7 @@ The batch processing Python script is [here](../../synthesis-workflow/meshlab_LO
 
 Another more research-oriented mesh simplification approach would be using [Instant Meshes](https://github.com/wjakob/instant-meshes). The usage can be found [here](https://blender.stackexchange.com/a/108322).
 
-## Fabricate Level-of-Detail (LOD) Model in Blender
+### Fabricate Level-of-Detail (LOD) Model in Blender
 
 To scripting Blender, two options are available:
 
@@ -74,5 +68,19 @@ Blender tips:
 
 ![image-20210425003648458](figs/image-20210425003648458.png)
 
-## Import to Unity
+### Import to Unity
+
+Now the `.fbx` can be imported to Unity along with the corresponding texture `.jpg` file. But what's imported is still the "model" instead of "prefab". Prefab contains Unity components, such as "RigidBody", "Mesh Collider" that we care most.
+
+For this, open any empty scene and drag the models into it. Select all the models and go to menu `Synthesis3D > FBX to Prefab`. The editor script [`FBX2Prefabs.cs`](../../synthesis-workflow/synthesis3D/Assets/Synthesis3D/Editor/FBX2Prefabs.cs) will be executed and saved models as prefabs.
+
+## Synthetic Data Generation in Unity
+
+After the steps above, the synthetic data generation in Unity requires the following major tasks:
+
+* Step 1: Instantiation of Rock Models
+* Step 2: Stockpile Generation by Gravity Falling
+* Step 3: Multi-View Image Data Generation by Programming Camera Movement
+* Step 4: 3D Point Cloud Data Generation by Ray Casting
+* Step 5: Export Synthetic Data
 
