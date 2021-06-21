@@ -21,6 +21,12 @@ bpy.ops.object.delete()
 for mat in D.materials:
     D.materials.remove(mat)
 
+# set scene unit (important, otherwise Unity won't set the mesh collider correctly)
+# scale = 0.01 means 1 Blender unit = 0.01m = 1cm
+# FBX system uses 1 unit = 1cm by default, so here we set the same and export
+C.scene.unit_settings.system = 'METRIC'
+C.scene.unit_settings.scale_length = 0.01
+
 for folderID in range(start_folder_ID, end_folder_ID + 1): # folder name '1', '2', ... '40'
     model_path = os.path.join(root_path, rock_category, str(folderID), 'models')
     
@@ -38,7 +44,7 @@ for folderID in range(start_folder_ID, end_folder_ID + 1): # folder name '1', '2
 
     # save .fbx model
     saved_model_name = os.path.join(model_path, rock_category+'_'+str(folderID)+'_'+'LODs'+'.fbx')
-    bpy.ops.export_scene.fbx(filepath=saved_model_name)
+    bpy.ops.export_scene.fbx(filepath=saved_model_name, global_scale=1.00)
 
     # clean all objects
     for obj in D.objects:

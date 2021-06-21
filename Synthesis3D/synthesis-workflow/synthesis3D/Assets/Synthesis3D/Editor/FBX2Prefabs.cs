@@ -39,14 +39,17 @@ public class FBX2Prefab
                     if (i == 1)
                         sHeight.doubleValue = 0.3;
                     if (i == 2)
-                        sHeight.doubleValue = 0.07;
+                        sHeight.doubleValue = 0.01;
                 }
                 obj.ApplyModifiedProperties();
             }
 
             // Add RigidBody Component (if it doesn't have one)
-            if (gameObject.GetComponent<Rigidbody>() == null)
-                gameObject.AddComponent<Rigidbody>();
+            if (gameObject.GetComponent<Rigidbody>() == null) 
+            {
+                Rigidbody rb = gameObject.AddComponent<Rigidbody>();
+                rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            }
 
             // Add Mesh Collider Component (if it doesn't have one)
             if (gameObject.GetComponent<MeshCollider>() == null)

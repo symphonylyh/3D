@@ -25,11 +25,11 @@ See [guide](https://code.visualstudio.com/docs/other/unity). Install ".NET Core 
 Then install  three VSCode extensions: C# Extension, Debugger for Unity, Unity Tools. Use VS Code as the External Tools for Unity editor.
 
 * IntelliSense: at the beginning IntelliSense doesn't work. Preferences--Settings--search "omnisharp"--section "Omnisharp: Use Global Mono"--change to "Always"--Reload (Mac only)
-
 * Debugger: On the Debugger page in vscode, first time click "create a launch.json" file and select "Unity Debugger". Now you can start the debugger, set breakpoints, etc. For debugging, just go to Unity and start the game, the debugging will start.
 * Interactive debugging: in VS Code debug console (after install Unity Debugger, the console will be next to the terminal console), we can type variable, its fields, etc. Very useful
-
 * Doc: Select a function, `cmd+'` to open Unity doc. Or `cmd+shift+'` to search a certain function name.
+
+In File -- Preferences -- Settings, Turn on `Editor: Format on Type`, now by typing `///`, it will auto-complete the signature comment of a function.
 
 # Unity Project Structure
 
@@ -41,17 +41,17 @@ Right click this to change projection from **orthographic** to **perspective**, 
 
 ![scene-gizmo](./figs/scene-gizmo.png)
 
-| Action      | Shortcuts (Mac)                                              | Shortcuts (Win)       |
-| ----------- | ------------------------------------------------------------ | --------------------- |
-| Hand tool   | Q                                                            | same                  |
-| Move tool   | W, click the object, you can move along X/Y/Z axis           | same                  |
-| Rotate tool | E, click the object, you can rotate along X/Y/Z axis         | same                  |
-| Scale tool  | R, click the object, drag the center cube to scale uniformly | same                  |
-| Pan         | Option/Alt + Cmd + drag                                      | mid                   |
-| Orbit       | Option/Alt + drag                                            | right                 |
-| Zoom        | Two fingers up & down                                        | scroll                |
-| Focus       | Select an object, press F                                    | same                  |
-| Flythrough  | Two fingers pressed, WASDQE to move, Shift to faster         | right pressed, WASDQE |
+| Action      | Shortcuts (Mac)                                              | Shortcuts (Win)                      |
+| ----------- | ------------------------------------------------------------ | ------------------------------------ |
+| Hand tool   | Q                                                            | same                                 |
+| Move tool   | W, click the object, you can move along X/Y/Z axis           | same                                 |
+| Rotate tool | E, click the object, you can rotate along X/Y/Z axis         | same                                 |
+| Scale tool  | R, click the object, drag the center cube to scale uniformly | same                                 |
+| Pan         | Option/Alt + Cmd + drag                                      | mid                                  |
+| Orbit       | Option/Alt + drag                                            | right, or alt+left                   |
+| Zoom        | Two fingers up & down                                        | scroll (coarse), or alt+right (fine) |
+| Focus       | Select an object, press F                                    | same                                 |
+| Flythrough  | Two fingers pressed, WASDQE to move, Shift to faster         | right pressed, WASDQE                |
 
 #### Ambient Light
 
@@ -79,6 +79,7 @@ Debug.Log(String.Format("hello world {0:0.00}", 1m)); // 1.00, m is decimal, f i
 // decimal in C# represents "exact" floating point, while float/double is approximation of the value. When you want exact number, decimal is better.
 string s = "wow";
 Debug.Log("hello world" + s); // string is basic type, you can + like python
+Debug.Log($"({x},{z})"); // $ will read the variable inside {}. The most convenient print!
 ```
 
 #### Save file
@@ -119,12 +120,12 @@ void Update()
 
 #### Scriptable Object
 
-Typically used to manage the common traits across entities. It's like defining the data strcuture and inheritance.
+Typically used to manage the common traits across entities. It's like defining the data structure and inheritance. Monobehavior class is per prefab. Scriptable object is global and can't be attached to prefab. Also, I found it useful to encapsulate certain set of functions inside a scriptable object with all **static** methods (so they're globally accessible). For example the ray tracing function is not related to certain game object, but more like an overall common method that can be called anytime.
 
 ```c#
 public abstract class	Animal : ScriptableObject
 {
-  ...
+  public string type = "Animal"; // only one copy of this variable for all prefabs
   public abstract void Bark();
 } // abstract is like virtual in C++
 
@@ -178,7 +179,7 @@ foreach (var keys in d.Keys) or foreach (var values in d.Values)
 
 **yield return/yield break**
 
-everytime when the function is called, when the **yield return** statement is reached the value is returned, and the current location in code is **retained**. Execution is **restarted** from that location the next time that the iterator function is called.
+every time when the function is called, when the **yield return** statement is reached the value is returned, and the current location in code is **retained**. Execution is **restarted** from that location the next time that the iterator function is called.
 
 ```c#
 IEnumerable<int> GenerateWithYield() 
@@ -192,6 +193,22 @@ foreach(var number in GenerateWithYield())
 ```
 
 **yield break** will mark the iterator as ended.
+
+#### Tag and Layer
+
+Unity has 8 built-in layers, including "Ignore Raycast" and 24 user-defined layers. They are represented as 32-bit integer. Don't use layer 31 since it's preserved. Different gameobject can be assigned to different layers. In camera/light settings, changing the "culling mask" field can achieve layer-based camera view.
+
+#### Automatic Memory Management
+
+Value types (pass-by-value): int, float, bool, Unity's struct (e.g. Color, Vector3, etc)
+
+Reference types (pass-by-ref): objects, strings, arrays.
+
+The `new` keyword does not always mean a heap allocation. new Class is on heap; new Struct is on stack, except when as a member variable. See [here](http://clarkkromenaker.com/post/csharp-structs/#:~:text=In%20C%23%2C%20classes%20are%20always,class%20if%20a%20class%20member.). So if we new a Vector3 struct, it's actually on stack! Don't worry when using inside loop or something, there is no garbage collection happening.
+
+#### "as" keyword
+
+`var A = B as C;` is type cast.
 
 # Image Synthesis
 
