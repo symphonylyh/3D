@@ -122,12 +122,13 @@ tensorboard-plugin-wit==1.8.0
 terminado==0.10.0
 testpath==0.5.0
 threadpoolctl==2.1.0
-torch==1.7.0
-torch-cluster==1.5.9
-torch-geometric==1.7.0
-torch-points-kernels==0.7.0
-torch-scatter==2.0.6
-torch-sparse==0.6.9
+# install separately with specific torch and cuda version
+#torch==1.7.0
+#torch-cluster==1.5.9
+#torch-geometric==1.7.0
+#torch-points-kernels==0.7.0
+#torch-scatter==2.0.6
+#torch-sparse==0.6.9
 torchfile==0.1.0
 torchnet==0.0.4
 torchvision==0.8.1
