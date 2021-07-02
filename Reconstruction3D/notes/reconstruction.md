@@ -9,3 +9,8 @@ Several papers on neural scene representation and view synthesis
 * Scene representation networks (SSNs)
 * local light-field fusion (LLFF)
 
+
+
+Reconstruction:
+
+* [NeuralRecon](https://zju3dv.github.io/neuralrecon/), CVPR 2021. On molecular video and known camera pose (estimated from SLAM or SfM)

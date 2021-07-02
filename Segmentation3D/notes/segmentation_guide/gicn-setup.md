@@ -66,8 +66,11 @@ conda create --prefix H:\envs\gicn python=3.6
 conda activate H:\envs\gicn # need to activate in this way
 H:\envs\gicn\Scripts\pip.exe install [package] # pip install in this way
 
+## if conda and pip take up too much space due to the cache, try cleaning
 # conda clean
 conda clean --all --dry-run # show prunable packages. remove --dry-run to actually clean up
+# pip clean
+H:\envs\gicn\Scripts\pip.exe cache purge
 
 # notebook
 conda install -c anaconda ipykernel # jupyter notebook
