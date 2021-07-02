@@ -13,6 +13,17 @@ This section is a subsection of [3D segmentation section](./segmentation.md).
 * [video](https://www.youtube.com/watch?v=qKGyykBE6oU)
 * [blog](https://towardsdatascience.com/torch-points3d-a-unifying-framework-for-deep-learning-on-point-clouds-94115c0be4fb) for quick intro, [blog](https://analyticsindiamag.com/hands-on-guide-to-torch-points3d-a-modular-deep-learning-framework-for-3d-data/) for hands-on guide
 
+## Github Setup
+
+* We want to fork points3D and get up to date with the original repo
+* We want to add the torch-points3d repo as a subdirectory in my big 3D/Segmentation3D repo
+  * Fork the repo on github web, now this forked repo has a link `https://github.com/symphonylyh/torch-points3d.git`
+  * Go to the big 3D repo, add the forked repo as a subtree: `git subtree add --prefix Segmentation3D/Points3D https://github.com/symphonylyh/torch-points3d.git master --squash`. This will create a folder `3D/Segmentation3D/Points3D` which is the master branch of the torch-points3d repo. use `--squash` to merge as just one commit.
+  * Commit it in Github Desktop or by `git push origin master`. Now this repo is added as a subrepo
+  * say the local repo is A, the forked repo is B, the original repo is C. ABC are different repos.
+  * General push just goes to A; to update A <--> B, `git subtree push --prefix Segmentation3D/Points3D https://github.com/symphonylyh/torch-points3d.git master` and `git subtree pull --prefix Segmentation3D/Points3D https://github.com/symphonylyh/torch-points3d.git master --squash`; to update B <-- C, on github web, click "Fetch Upstream" --> "Fetch and merge"
+* A subdirectory can also be extracted to be a separate repo by subtree. Check out that later.
+
 ## Environment Setup
 
 The best practice is to use conda as an environment manager, pip as the package installer, and Poetry as the dependency manager ([source](https://ealizadeh.com/blog/guide-to-python-env-pkg-dependency-using-conda-poetry)). Points3D use [Poetry](https://python-poetry.org/) as the package management system. But for simplicity, I just use the old pip style.
