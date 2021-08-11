@@ -10,20 +10,40 @@ This section is after the [3D reconstruction section](../../../Reconstruction3D/
 
 As the preparation steps for 3D synthetic data generation in Unity, the following major tasks are necessary:
 
-* Step 1: Export Reconstructed Rock Models (Metashape)
+* Step 1: Export Reconstructed Rock Models (Metashape/Laser Scan)
 * Step 2: Mesh Re-centering/Simplification/Downsampling (MeshLab)
 * Step 3: Fabricate Level-of-Detail (LOD) Model (Blender)
 * Step 4: Import to Unity
 
-### Export Reconstructed Rock Models from Metashape
+### Export Reconstructed Rock Models from Metashape/Laser Scan
 
-Which data format is the most suitable? The Autodesk FBX file format is a popular 3D data interchange format utilized between 3D editors and graphics engines. Unity generally takes .fbx or .obj as mesh model. MeshLab can import but cannot export .fbx. .fbx model is more compressed than .obj model. As a result, I choose .fbx as the protocol format between Metashap & Meshlab as well as between Blender & Unity, and choose .obj as the protocol format between MeshLab & Blender. 
+#### Metashape
+
+RR3 and RR4 rocks are reconstructed using SfM. These are models with texture.
+
+Which data format is the most suitable? The Autodesk FBX file format is a popular 3D data interchange format utilized between 3D editors and graphics engines. Unity generally takes .fbx or .obj as mesh model. MeshLab can import but cannot export .fbx. .fbx model is more compressed than .obj model. As a result, I choose .fbx as the protocol format between Metashape & Meshlab as well as between Blender & Unity, and choose .obj as the protocol format between MeshLab & Blender. 
 
 To export model from Metashape with texture, File -- Export -- Export Model, save colors and normals, and export texture as a separate file (jpeg was found to have the smallest size). If "Embed texture" is checked, there will be an extra `.fbm` folder. I found this is not necessary, Unity/MeshLab/Blender can automatically match the texture file with the model. 
 
 ![image-20210425000652188](figs/image-20210425000652188.png)
 
 As a result, for each rock we have a raw `.fbx` model and a `.jpg` texture.
+
+For automated export from Metashape, see [guide](../../../Reconstruction3D/notes/agisoft_metashape_guide/agisoft_metashape_guide.md) and [script](../../../Reconstruction3D/metashape-workflow/metashape_batch_export.py).
+
+#### Laser scan
+
+Ballast rocks are reconstructed using laser scanner. These are textureless models. 
+
+They have reddish, grayish, and white colors. So I use SfM to reconstruction a few rocks of each color, and map the texture to all laser scanned models.
+
+I found the polygon mesh generated from the laser scanner sometimes contain irregular faces, so before calculating the surface area and volume, I apply Taubin smooth to the mesh.
+
+Then the mesh needs to be parameterization before assigning texture. I use Parameterization: Flat Plane.
+
+Finally, set the texture map for the mesh and export as PLY model.
+
+The above steps are automated by this Pymeshlab [script]().
 
 ### Mesh Re-centering/Simplification/Downsampling in MeshLab
 

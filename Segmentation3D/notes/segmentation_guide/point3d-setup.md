@@ -228,3 +228,72 @@ def __repr__(self): # this is to override what's printed when print(ClassInstanc
     return self.__class__.__name__ # this is used to print the class name
 ```
 
+### YAML Config
+
+Points3D use YAML files for hierarchical configuration of models, datasets, etc. It uses OmegaConf library (actually it follows Facebook Hydra and that's why). See a concrete Hydra example for ML [here](https://towardsdatascience.com/complete-tutorial-on-how-to-use-hydra-in-machine-learning-projects-1c00efcc5b9b).
+
+For example, 
+
+```python
+# conf/config.yaml
+
+db:
+  driver: mysql
+  user: omry
+  pass: secret
+  test: ${dataset.name} # use ${} to refer anothe variable, where `dataset` is the @package name, `name` is the key name
+
+# app.py
+import hydra
+from omegaconf import DictConfig, OmegaConf
+
+@hydra.main(config_path="conf", config_name="config") # use this to specify config file path and Hydra will load the file when run this function
+def my_app(cfg : DictConfig) -> None:
+    print(OmegaConf.to_yaml(cfg)) # this will print the YAML file
+    # access by:
+    cfg.db.driver # object attribute
+    cfg['db']['driver'] # dict
+
+# or instead, you can just load the YAML file to access the configs
+opts = Omegaconf.load("conf/config.yaml")
+
+if __name__ == "__main__":
+    my_app()
+    
+# command line
+python app.py db.user=root db.pass=1234 # can be overwrite by command line
+```
+
+Hierarchical example:
+
+```python
+# file structure
+├── conf
+│   ├── config.yaml
+│   ├── db
+│   │   ├── mysql.yaml
+│   │   └── postgresql.yaml
+│   └── __init__.py
+└── my_app.py
+
+# conf/config.yaml
+defaults:
+  - db: mysql # use `???` to make this field a mandatory from command line
+  - db/mysql # this means non-overridable defaults
+  - /db/mysql # this will look up a directory level
+  - [folder_name]: [file_name]
+...
+
+# multirun
+python app.py --multirun db=mysql,postgresql # easily by this line it can run the program with different configs
+```
+
+when load config.yaml, the keyword 'defaults' tell it to load the configs in `/db/mysql.yaml`, key is folder name, value is file name. This is called config groups. To define these config groups you need to include a special directive at the beginning of every file `# @package [folder name]`.
+
+Thus by changing this 'defaults' in YAML or in command line can switch between different configs.
+
+### Train
+
+The main entrance is `train.py`, which loads and overrides the `conf/config.yaml` and calls the real trainer `torch_points3d/trainer.py`.
+
+Windows has dataloader issue with multi-processing, so I changed `trainer.py` to be special on Windows

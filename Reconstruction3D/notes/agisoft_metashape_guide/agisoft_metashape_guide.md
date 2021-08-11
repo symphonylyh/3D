@@ -6,7 +6,7 @@ Date: 03/2021
 * Step 2: Export camera images and put under each rock's subfolder. Use [rename_images.py](../../metashape-workflow/rename_images.py) if you want to have cumulative count of the image name index.
 * Step 3: Use the provided [U-2-Net-Rock](../../../U-2-Net-Rock) to generate rock masks. Call the [inference script](../../../U-2-Net-Rock/u2net_test.py) and specify the image folder. Use [gather_images.py](../../metashape-workflow/gather_images.py) if you want to collect all the images and masks for training purpose.
 * Step 4: Follow the workflow described in this guide to reconstruct the model of each rock. Open the `reconstruct.psx` and import photos. Then load the `batch.xml` to run the next steps described below.
-* Step 5: After successful reconstruction of all rocks, use [metashape_batch_export.py](../../metashape-workflow/metashape_batch_export.py) to export the FBX models and textures.  
+* Step 5: After successful reconstruction of all rocks, use [metashape_batch_export.py](../../metashape-workflow/metashape_batch_export.py) to export the FBX models and textures and PLY models.  
 * The next steps are described in the [synthesis workflow](../../../Synthesis3D/notes/synthesis-workflow/synthesis.md) section.
 
 ## Notes
@@ -46,20 +46,30 @@ The basic workflow is:
 
 ![image-20210410204031024](figs/image-20210410204031024.png)
 
-Details can be found in the  [manual](./metashape_manual_1.7.pdf). For output, we can export the model and the texture map, etc.
+Details can be found in the [manual](./metashape_manual_1.7.pdf). For output, we can export the model and the texture map, etc.
 
-In workflow, I created template batch process for new data. Add photos --> Batch order 1&2 (import mask & align photo). Note there is a bug in Metashape, every time we load the batch.xml file, we need to change the order 1 from generate masks to import masks, and select the right folder -->manually label object and background markers on chunk 1, specify scale bar, and label object markers on chunk 2 --> Batch order 3 & 4 (align and merge chunks) --> specify "merged chunk" in Batch order 5 & 6 & 7 (build mesh and texture) --> Read volume and output.
+In workflow, I created template batch process for new data. 
+
+* Step 1: Add photos for the two chunks
+* Step 2: Worflow -- Batch Process -- Batch order 1&2 (import mask & align photo). Note there is a bug in Metashape, every time we load the batch.xml file, we need to edit order 1 from "Generate Masks" to "Import Masks", and specify the mask folder
+* Step 3: manually label **object and background** **markers** on chunk 1, specify scale bar, and label **object markers** on chunk 2. For 12 in. turntable, blue-red is 12.9cm, blue-yellow is 22.3cm; for 15-in. turntable, blue-red is 17.5cm, blue yellow is 29.0cm.
+* Step 4: Batch order 3 & 4 (align and merge chunks) 
+* Step 5: specify "merged chunk" in Batch order 5 & 6 & 7 (build mesh and texture) . Sometimes it may already select the merged chunk by default. Note for some rocks that the two-side scanning don't have very good overlap, the mesh may not close along certain boundary. In this case, we do Workflow -- Build Dense Point Cloud, and then Workflow -- Build Mesh -- Source: Dense point cloud. This usually resolves the issue. Tools -- Mesh -- Close holes may help as well.
+* Step 6: Tools -- Mesh -- Measure Area and Volume. Check if volume is reasonable. In very rare case the mesh is not watertight, volume is not bounded (showing 0), and we use other approaches (mesh from dense cloud or close holes) to obtain a watertight mesh.
+* Step 7: after all rocks in a parent folder is finished, use [metashape_batch_export.py](../../metashape-workflow/metashape_batch_export.py) to export the FBX models and textures and PLY models, and also collect area & volume info into spreadsheet.
 
 ![image-20210417170559521](figs/image-20210417170559521.png)
 
 For output, we can export `.fbx` format. It's easier to do that in console, with `Metashape.app.document.chunk.exportModel(path="./models/test.fbx", binary=False, precision=6, texture_format=Metashape.ImageFormatJPEG, save_texture=True, save_uv=True, save_normals=True, save_colors=True, save_cameras=False, save_markers=False, save_udim =False, save_alpha=False, strip_extensions=False, format=Metashape.ModelFormatFBX)`
 
+For `.ply` format, `Metashape.app.document.chunk.exportModel(path="./models/RR3_2.ply", clip_to_boundary = False, format = Metashape.ModelFormatPLY, binary=True, save_cameras = False, save_comment = False, save_markers = False, save_texture = False, save_uv = False, strip_extensions = True)`
+
 ![image-20210426154606933](figs/image-20210426154606933.png)
 
 Useful tricks if we want more Python in Metashape:
 
-* If we have many project files `.psx` and we want to use an automated Python script to batch process (e.g. export the model from each of the projects). We can either install the [stand-alone Python module from wheel](https://agisoft.freshdesk.com/support/solutions/articles/31000148930-how-to-install-metashape-stand-alone-python-module) (need license activation) OR create an empty main project and execute the script (Tools -- Run script).
-* If we want to include external libraries such as OpenCV and Pytorch, we can use Metashape's pip so the packages will be installed under `C:\Program Files\Agisoft\Metashape Pro\python\Lib\site-packages`. Based on [link](https://agisoft.freshdesk.com/support/solutions/articles/31000136860-how-to-install-external-python-module-to-photoscan-professional-pacakge), we can use `"%programfiles%\Agisoft\Metashape Pro\python\python.exe" -m pip install python_module_name`to install.
+* If we have many project files `.psx` and we want to use an automated Python script to batch process (e.g. export the model from each of the projects). We can either install the [stand-alone Python module from wheel](https://agisoft.freshdesk.com/support/solutions/articles/31000148930-how-to-install-metashape-stand-alone-python-module) (need license activation) OR create an empty main project and execute the [script](../../metashape-workflow/metashape_batch_export.py) (Tools -- Run script).
+* If we want to include external libraries such as numpy, OpenCV and Pytorch, we can use Metashape's pip so the packages will be installed under `C:\Program Files\Agisoft\Metashape Pro\python\Lib\site-packages`. Based on [link](https://agisoft.freshdesk.com/support/solutions/articles/31000136860-how-to-install-external-python-module-to-photoscan-professional-pacakge), we can use `"%programfiles%\Agisoft\Metashape Pro\python\python.exe" -m pip install [python_module_name]`to install. Note: use the command in Windows original cmd prompt not in anaconda console or others.
 
 ## Image Capture
 

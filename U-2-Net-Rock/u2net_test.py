@@ -132,7 +132,7 @@ def main(root_path, rock_folder):
         del d1,d2,d3,d4,d5,d6,d7
 
 if __name__ == "__main__":
-    root_path = 'H:\RockScan\RR3'
-    rock_folders = ['test']
+    root_path = 'H:\RockScan\Ballast'
+    rock_folders = ['1', '41', '81']
     for rock_folder in rock_folders:
         main(root_path, rock_folder)

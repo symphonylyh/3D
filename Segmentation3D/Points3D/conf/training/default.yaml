@@ -1,7 +1,7 @@
 # @package training
 # Those arguments defines the training hyper-parameters
 epochs: 100
-num_workers: 6
+num_workers: 6 
 batch_size: 16
 shuffle: True
 cuda: 0 # -1 -> no cuda otherwise takes the specified index

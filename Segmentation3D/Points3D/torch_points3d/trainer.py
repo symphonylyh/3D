@@ -4,6 +4,7 @@ import torch
 import hydra
 import time
 import logging
+import platform 
 
 from tqdm.auto import tqdm
 import wandb
@@ -72,7 +73,6 @@ class Trainer:
             Wandb.launch(self._cfg, self._cfg.wandb.public and self.wandb_log)
 
         # Checkpoint
-
         self._checkpoint: ModelCheckpoint = ModelCheckpoint(
             self._cfg.training.checkpoint_dir,
             self._cfg.model_name,
@@ -104,6 +104,12 @@ class Trainer:
 
         self._model.log_optimizers()
         log.info("Model size = %i", sum(param.numel() for param in self._model.parameters() if param.requires_grad))
+
+        # [HHH] Add platform-specific setting for dataloader
+        # import platform at the beginning
+        if platform.system() == 'Windows':
+            self._cfg.training.num_workers = 0
+            self._cfg.training.batch_size = 2
 
         # Set dataloaders
         self._dataset.create_dataloaders(
