@@ -8,8 +8,8 @@ import openpyxl
 root_path = 'H:\RockScan'
 rock_category = 'Ballast'
 num_folders = 120
-start_folder = 41
-end_folder = 80
+start_folder = 1
+end_folder = 120
 
 
 ### Create 120 particle folders
@@ -57,7 +57,7 @@ for folderID in range(start_folder, end_folder+1):
     ms.taubin_smooth(stepsmoothnum=1)
 
     # UV parameterization, Filters -- Texture -- Parameterization: Flat Plane; Filters -- Texture -- Per vertex texture function; Filters -- Texture -- Set texture
-    # ms.per_vertex_texture_function() # assign UV coords # somehow, this step is required when we do in MeshLab, but in script we should remove this step. This generate per-vertex UV coords while the next line generates per-face texcoords. My guess is per-vertex overrides per-face when we open the saved mesh.
+    ms.per_vertex_texture_function() # assign UV coords # somehow, this step is required when we do in MeshLab, but in script we should remove this step. This generate per-vertex UV coords while the next line generates per-face texcoords. My guess is per-vertex overrides per-face when we open the saved mesh.
     
     ms.parametrization_flat_plane()
     ms.set_texture(textname=os.path.join(model_path, rock_category+'_'+str(folderID)+'.jpg'))
@@ -70,10 +70,17 @@ for folderID in range(start_folder, end_folder+1):
     volumes[folderID-1] = measures['mesh_volume']/1e3
     areas[folderID-1] = measures['surface_area']/1e2
 
+    # texture to vertex color (otherwise Open3D won't be able to read the texture map)
+    # ms.transfer_color_texture_to_vertex() # this doesn't work somehow...
+    # this results in dark vertex color, we need to adjust the brightness
+    # ms.vertex_color_brightness_contrast_gamma(brightness=0)
+
     # save ply model
     os.chdir(model_path)
     save_model_name = rock_category + '_' + str(folderID) + '.ply'
-    ms.save_current_mesh(file_name=save_model_name, binary=True, save_vertex_normal=True)
+    ms.save_current_mesh(file_name=save_model_name, binary=False, save_vertex_normal=True, save_vertex_color=True, save_wedge_texcoord=True)
+    save_model_name = rock_category + '_' + str(folderID) + '.obj'
+    ms.save_current_mesh(file_name=save_model_name, save_vertex_normal=True, save_vertex_color=True, save_wedge_texcoord=True)
 
 
 # write volume and surface area stats to excel

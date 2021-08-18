@@ -14,3 +14,9 @@ Several papers on neural scene representation and view synthesis
 Reconstruction:
 
 * [NeuralRecon](https://zju3dv.github.io/neuralrecon/), CVPR 2021. On molecular video and known camera pose (estimated from SLAM or SfM)
+
+
+
+### Reconstruction Software
+
+[survey](https://link.springer.com/chapter/10.1007/978-3-030-73043-7_19)

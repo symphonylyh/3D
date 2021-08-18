@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<batchjobs version="1.7.0" save_project="true">
+  <job name="AlignPhotos" target="all">
+    <adaptive_fitting>true</adaptive_fitting>
+    <downscale>0</downscale>
+    <filter_stationary_points>false</filter_stationary_points>
+    <mask_tiepoints>false</mask_tiepoints>
+    <tiepoint_limit>0</tiepoint_limit>
+  </job>
+  <job name="ResetRegion" enabled="false" target="all"/>
+  <job name="OptimizeCameras" enabled="false" target="all">
+    <adaptive_fitting>true</adaptive_fitting>
+  </job>
+  <job name="BuildModel" enabled="false" target="all">
+    <downscale>2</downscale>
+    <reuse_depth>true</reuse_depth>
+    <source_data>0</source_data>
+  </job>
+  <job name="GenerateMasks" enabled="false" target="all">
+    <masking_mode>3</masking_mode>
+  </job>
+  <job name="GenerateMasks" enabled="false" target="all">
+    <masking_mode>3</masking_mode>
+    <path>{filename}.png</path>
+    <tolerance>40</tolerance>
+  </job>
+  <job name="BuildDenseCloud" enabled="false" target="all">
+    <downscale>2</downscale>
+    <reuse_depth>true</reuse_depth>
+  </job>
+  <job name="BuildModel" enabled="false" target="all">
+    <downscale>2</downscale>
+    <reuse_depth>true</reuse_depth>
+  </job>
+</batchjobs>

@@ -12,15 +12,11 @@ Date: 03/2021
 ## Notes
 
 *  Insert images in Typora: when we need to insert a lot of images/screenshots into .md file, Open Typora -- File -- Preferences -- Image -- Select "Copy to current folder" or "Copy to custom folder", and choose "Use relative path if possible". 
-* Use **Win+Shift+S** for screenshot. Use PowerPoint Insert - Screen Recording, **Win+Shift+R** to start, **Win+Shift+Q** to stop.
-* Convert video/images to GIF. See [blog](http://blog.pkh.me/p/21-high-quality-gif-with-ffmpeg.html) 
-  * From video`ffmpeg -i video.mov -vf scale=480:-1,smartblur=ls=-0.5,crop=iw:ih-2:0:0 -r 5 result.gif`
-  * From images `ffmpeg -framerate 5 -start_number 1 -i %03d.JPG -vf scale=1080:-1 -frames:v 30 side2.gif`
-  * `-i` for input, `-r` or `-framerate` for FPS, `-vf` for visual filters, specify resize width:height, smartblur to sharpen images, crop to trim (in pixels) a (iw) by (ih-2) region at position (0,0)
-  * Glob images `ffmpeg -f image2 -pattern_type glob -i '*_mask.jpg' out.gif`. Start/end images `ffmpeg -framerate 5 -start_number 25 -i img_%4d.jpg -frames:v 50 out.gif`. By default the iterator starts from 0, `-start_number` can set this. `-frames:v XX` can control the range of images to be used.
-  * To avoid color distortion in GIF, first generate a palette for all input images, `ffmpeg -i image_%02d.png -vf palettegen palette.png`, then use the palette during conversion, `ffmpeg -i image_%02d.png -i palette.png -filter_complex "scale=1080:-1" video.gif`
+*  Use **Win+Shift+S** for screenshot. Use PowerPoint Insert - Screen Recording, **Win+Shift+R** to start, **Win+Shift+Q** to stop.
 
 ## Intro
+
+This [blogger](https://dinosaurpalaeo.wordpress.com/category/photogrammetry/) has many useful posts on Metashape tutorial, flowchart, and tricks.
 
 [Agisoft Metashape Professional](https://www.agisoft.com/) is a powerful Structure-from-Motion based 3D reconstruction software that performs photogrammetric processing of digital images. The main differences between Profession version (\$3499) and Standard version (\$179) is the scaling (marker reference), measurement functionalities, and export options. Another free and open-source option may be [Meshroom](https://alicevision.org/) for later deployment with IDOT.
 
@@ -164,3 +160,32 @@ I've tried several approaches to obtain a 360, all-around scan of the rocks, but
 <img src="figs/image-20210410225035005.png" alt="image-20210410225035005" style="zoom:67%;" /> <img src="figs/image-20210410225401728.png" alt="image-20210410225401728" style="zoom:67%;" />
 
 * Step 3: we can read the measured volume either from Tools -- Mesh -- Measure Area and Volume, or from the console `print(Metashape.app.document.chunk.model.volume())` to get higher precision digits.
+
+
+
+## Stockpile Reconstruction
+
+Stockpile reconstruction is just one side surface reconstruction, so the workflow is a little different.
+
+There are two types of stockpile data we have:
+
+* Medium-scale test stockpiles. Such scene has a large ground area that does not need to be reconstructed. We need to have additional steps to only reconstruct the stockpile area.
+* Field stockpiles. Such quarry scene usually has a big stockpile where we only reconstruct part of the stockpile surface. For these scenes we just do Step 1 & 2  & 5 & 6 & 7 assuming that all reconstructed regions are meaningful regions.
+
+The workflow is built into the following batch process. And the template project is at [here](../../metashape-workflow/stockpile).
+
+![image-20210817203841870](figs/image-20210817203841870.png)
+
+* Step 0: video to frames. see [ffmpeg guide](../ffmpeg_guide/ffmpeg_guide.md)
+* Step 1: Add photos to 'photo' chunk and 'frame' chunk **(manual)**. 
+* Step 2: Workflow -- Align photos **(batch order 1)**. This step resolves image pairs and gives a sparse point cloud. Different from individual particle scan, here I set "Accuracy: Highest" and "Tie point limit: 0" (0 means unlimited) and "Adaptive camera model fitting" checked.
+
+![image-20210816202831543](figs/image-20210816202831543.png)
+
+* Step 3: clean sparse cloud **(manual)**. Usually we only want the stockpile area to be reconstructed, but for such scene we don't have U-Net masks for each image. We first manually clean the cloud by selection --> invert selection --> delete. The solution is to generate a rough mesh from the manually cleaned sparse cloud --> generate rough ROI masks and use them during dense reconstruction.
+* Step 4: optimize cameras (Tools -- Optimize cameras) and build rough mesh (Workflow -- Build Mesh, source: Sparse cloud) and generate object masks (Tools -- Mesh -- Generate Masks) and apply masks (File -- Import -- Import masks -- From model), **(batch order 2 & 3 & 4 & 5 & 6)**. Since we clean up some points in the sparse cloud, we can update the camera parameters based on the cleaned tie points. Here I noticed that some points are cut off above certain height. Initially I think it's because we didn't take enough top views of the stockpile. But later on I found there is an automatic bbox region decided by Metashape after the alignment step 2 ([link](https://www.agisoft.com/forum/index.php?topic=13225.0)). For stockpile with a ground, the bbox somehow doesn't encompass all sparse points. Do Model -- Transform region -- Reset region to fit the bbox to all points. Note that every batch process we should manually change the "import mask" step due to a Metashape bug described before (it's changed to "Generate masks" every time loaded).
+
+* Step 5: build dense cloud (for deep learning) and mesh (for graph approach) **(batch order 7 & 8)**. Mesh is 
+* Step 6: label markers and specify scale bars (described previously in all-around scan section) 
+* Step 7: export cloud and mesh models ([script](../../metashape_workflow/metashape_batch_export_stockpile.py)).
+

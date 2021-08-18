@@ -41,7 +41,7 @@ I found the polygon mesh generated from the laser scanner sometimes contain irre
 
 Then the mesh needs to be parameterization before assigning texture. I use Parameterization: Flat Plane.
 
-Finally, set the texture map for the mesh and export as PLY model.
+Finally, set the texture map for the mesh, convert texture to per-vertex color, and export as PLY model.
 
 The above steps are automated by this Pymeshlab [script]().
 
