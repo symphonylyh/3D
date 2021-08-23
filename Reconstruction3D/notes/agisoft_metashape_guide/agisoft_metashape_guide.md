@@ -151,7 +151,7 @@ I've tried several approaches to obtain a 360, all-around scan of the rocks, but
 
 ------
 
-* Step 1: add four color-coding markers. Check other images to see if the automatic projections looks accurate. Note that we only need to ensure for one of the image sets the markers are correctly placed, because the background markers in the two sets won't align with each other. 
+* Step 1: add four color-coding markers. Check other images to see if the automatic projections looks accurate. Note that we only need to ensure for one of the image sets the markers are correctly placed, because the background markers in the two sets won't align with each other. **Important note: we should "create marker" in the pane, and "place marker" on the image, so the XYZ column should not display anything. For individual scan I didn't do this right, but for stockpile scan I did this way.**
 
 ![image-20210410224704061](figs/image-20210410224704061.png)
 
@@ -176,16 +176,18 @@ The workflow is built into the following batch process. And the template project
 
 ![image-20210817203841870](figs/image-20210817203841870.png)
 
+Sequence: check order 1 -- manual cleaning on sparse cloud -- check orders 2 to 8 all at once -- manual cleaning on dense cloud and mesh.
+
 * Step 0: video to frames. see [ffmpeg guide](../ffmpeg_guide/ffmpeg_guide.md)
 * Step 1: Add photos to 'photo' chunk and 'frame' chunk **(manual)**. 
 * Step 2: Workflow -- Align photos **(batch order 1)**. This step resolves image pairs and gives a sparse point cloud. Different from individual particle scan, here I set "Accuracy: Highest" and "Tie point limit: 0" (0 means unlimited) and "Adaptive camera model fitting" checked.
 
 ![image-20210816202831543](figs/image-20210816202831543.png)
 
-* Step 3: clean sparse cloud **(manual)**. Usually we only want the stockpile area to be reconstructed, but for such scene we don't have U-Net masks for each image. We first manually clean the cloud by selection --> invert selection --> delete. The solution is to generate a rough mesh from the manually cleaned sparse cloud --> generate rough ROI masks and use them during dense reconstruction.
+* Step 3: clean sparse cloud **(manual)**. Usually we only want the stockpile area to be reconstructed, but for such scene we don't have U-Net masks for each image. We first manually clean the cloud by selection --> invert selection --> delete. We can further go to Model -- Gradual selection -- Reprojection uncertainty -- adjust the threshold to around 100 or lower -- delete selected points. The solution is to generate a rough mesh from the manually cleaned sparse cloud --> generate rough ROI masks and use them during dense reconstruction.
 * Step 4: optimize cameras (Tools -- Optimize cameras) and build rough mesh (Workflow -- Build Mesh, source: Sparse cloud) and generate object masks (Tools -- Mesh -- Generate Masks) and apply masks (File -- Import -- Import masks -- From model), **(batch order 2 & 3 & 4 & 5 & 6)**. Since we clean up some points in the sparse cloud, we can update the camera parameters based on the cleaned tie points. Here I noticed that some points are cut off above certain height. Initially I think it's because we didn't take enough top views of the stockpile. But later on I found there is an automatic bbox region decided by Metashape after the alignment step 2 ([link](https://www.agisoft.com/forum/index.php?topic=13225.0)). For stockpile with a ground, the bbox somehow doesn't encompass all sparse points. Do Model -- Transform region -- Reset region to fit the bbox to all points. Note that every batch process we should manually change the "import mask" step due to a Metashape bug described before (it's changed to "Generate masks" every time loaded).
 
-* Step 5: build dense cloud (for deep learning) and mesh (for graph approach) **(batch order 7 & 8)**. Mesh is 
+* Step 5: build dense cloud (for deep learning), and mesh (for graph approach) **(batch order 7 & 8)**. Then we can do manual cleaning on the cloud and mesh to remove a small portion of ground.
 * Step 6: label markers and specify scale bars (described previously in all-around scan section) 
 * Step 7: export cloud and mesh models ([script](../../metashape_workflow/metashape_batch_export_stockpile.py)).
 

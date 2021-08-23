@@ -1,3 +1,6 @@
+'''
+Read laser scan STL file and convert to OBJ file with assigned texture.
+'''
 import os,sys
 from shutil import copy 
 import pymeshlab as ml
@@ -45,6 +48,8 @@ end_folder = 120
 ### Save as .ply
 volumes = np.zeros(num_folders)
 areas = np.zeros(num_folders)
+num_vertices = np.zeros(num_folders)
+num_faces = np.zeros(num_folders)
 for folderID in range(start_folder, end_folder+1):
     model_path = os.path.join(root_path, rock_category, str(folderID), 'models')
     model_name = os.path.join(model_path, rock_category+'_'+str(folderID)+'.stl')
@@ -52,9 +57,11 @@ for folderID in range(start_folder, end_folder+1):
     ms = ml.MeshSet()
     ms.load_new_mesh(model_name) # load new mesh and set as current mesh
     ms.remove_duplicate_vertices()
+    ms.close_holes()
 
     # Taubin smooth, Filters -- Smoothing, Fairing, and Deformation -- Taubin smooth
     ms.taubin_smooth(stepsmoothnum=1)
+    ms.re_orient_all_faces_coherentely()
 
     # UV parameterization, Filters -- Texture -- Parameterization: Flat Plane; Filters -- Texture -- Per vertex texture function; Filters -- Texture -- Set texture
     ms.per_vertex_texture_function() # assign UV coords # somehow, this step is required when we do in MeshLab, but in script we should remove this step. This generate per-vertex UV coords while the next line generates per-face texcoords. My guess is per-vertex overrides per-face when we open the saved mesh.
@@ -69,6 +76,8 @@ for folderID in range(start_folder, end_folder+1):
     # laser scan unit is mm, convert to cm
     volumes[folderID-1] = measures['mesh_volume']/1e3
     areas[folderID-1] = measures['surface_area']/1e2
+    num_vertices[folderID-1] = ms.current_mesh().vertex_number()
+    num_faces[folderID-1] = ms.current_mesh().face_number()
 
     # texture to vertex color (otherwise Open3D won't be able to read the texture map)
     # ms.transfer_color_texture_to_vertex() # this doesn't work somehow...
@@ -81,6 +90,11 @@ for folderID in range(start_folder, end_folder+1):
     ms.save_current_mesh(file_name=save_model_name, binary=False, save_vertex_normal=True, save_vertex_color=True, save_wedge_texcoord=True)
     save_model_name = rock_category + '_' + str(folderID) + '.obj'
     ms.save_current_mesh(file_name=save_model_name, save_vertex_normal=True, save_vertex_color=True, save_wedge_texcoord=True)
+    # patch the missing texture in obj file when exported from Meshlab
+    mat_name = save_model_name + '.mtl'
+    texture_name = rock_category+'_'+str(folderID)+'.jpg'
+    with open(mat_name, 'a') as f:
+        f.write(f'map_Kd {texture_name}')
 
 
 # write volume and surface area stats to excel
@@ -99,7 +113,9 @@ if mode == 'a':
 info = pd.DataFrame({
     'Rock ID': np.arange(1,num_folders+1),
     'Volume (cm^3)': volumes,
-    'Surface Area (cm^2)': areas
+    'Surface Area (cm^2)': areas,
+    'No. Vertices': num_vertices,
+    'No. Faces': num_faces
 })
 info.to_excel(writer, sheet_name='Metashape Stats',float_format='%.2f', index=False)
 writer.save()

@@ -19,7 +19,8 @@ doc.clear()
 
 volumes = np.zeros(num_folders)
 areas = np.zeros(num_folders)
-
+num_vertices = np.zeros(num_folders)
+num_faces = np.zeros(num_folders)
 for i in range(1, num_folders + 1): # folder name '1', '2', ... '40'
     project_path = os.path.join(root_path, rock_category, str(i))
     doc.open(os.path.join(project_path, project_name))
@@ -28,10 +29,17 @@ for i in range(1, num_folders + 1): # folder name '1', '2', ... '40'
     merged_chunk = doc.chunks[2]
     volume = merged_chunk.model.volume() * 1e6 # cm^3
     area = merged_chunk.model.area() * 1e4 # cm^2
+    num_v = merged_chunk.model.statistics().vertices
+    num_f = merged_chunk.model.statistics().faces
     volumes[i-1] = volume
     areas[i-1] = area
+    num_vertices[i-1] = num_v
+    num_faces[i-1] = num_f 
+
     print('Volume: ', volume, ' cm^3')
     print('Surface Area: ', area, ' cm^2')
+    print('No. Vertices: ', num_v)
+    print('No. Faces: ', num_f)
     
     model_path = os.path.join(project_path, 'models')
     if not os.path.exists(model_path):
@@ -41,6 +49,9 @@ for i in range(1, num_folders + 1): # folder name '1', '2', ... '40'
     merged_chunk.exportModel(path=model_name+'.fbx', binary=True, precision=6, texture_format=Metashape.ImageFormatJPEG, save_texture=True, save_uv=True, save_normals=True, save_colors=True, save_cameras=False, save_markers=False, save_udim =False, save_alpha=False, strip_extensions=False, format=Metashape.ModelFormatFBX)
     
     merged_chunk.exportModel(path=model_name+'.ply', clip_to_boundary = False, format = Metashape.ModelFormatPLY, binary=True, save_cameras = False, save_comment = False, save_markers = False, save_texture = False, save_uv = False, strip_extensions = True)
+
+    merged_chunk.exportModel(path=model_name+'.obj', clip_to_boundary = False, format = Metashape.ModelFormatOBJ, save_cameras = False, save_comment = False, save_markers = False, save_texture = True, save_uv = True, strip_extensions = True)
+
     print("Model saved.")
 
 # write volume and surface area stats to excel
@@ -60,7 +71,9 @@ if mode == 'a':
 info = pd.DataFrame({
     'Rock ID': np.arange(1,num_folders+1),
     'Volume (cm^3)': volumes,
-    'Surface Area (cm^2)': areas
+    'Surface Area (cm^2)': areas,
+    'No. Vertices': num_vertices,
+    'No. Faces': num_faces
 })
 info.to_excel(writer, sheet_name='Metashape Stats',float_format='%.2f', index=False)
 writer.save()
