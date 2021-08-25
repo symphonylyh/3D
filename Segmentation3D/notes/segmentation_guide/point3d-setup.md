@@ -64,6 +64,9 @@ python -m unittest -v # tests related to sparseconv will fail, but others should
 # try train a pointnet, this can also verify the basic functionalities
 # note that windows doesn't support multi-processing in data loader, so change the /conf/training/default.yaml and default_reg.yaml, num_workers=0, batch_size=2. For all other models and datasets, change these too on Windows
 python train.py task=segmentation models=segmentation/pointnet2 model_name=pointnet2_charlesssg data=segmentation/shapenet-fixed
+
+# test pointgroup
+python train.py task=panoptic models=panoptic/pointgroup model_name=PointGroup data=panoptic/s3disfused
 ```
 
 At the time being, both sparse conv backend options (Minkowski Engine, or torchsparse) are not supported on Windows. So on Windows we can't use `from torch_points3d.applications.sparseconv3d import SparseConv3d` yet.
@@ -236,7 +239,6 @@ For example,
 
 ```python
 # conf/config.yaml
-
 db:
   driver: mysql
   user: omry
@@ -247,7 +249,7 @@ db:
 import hydra
 from omegaconf import DictConfig, OmegaConf
 
-@hydra.main(config_path="conf", config_name="config") # use this to specify config file path and Hydra will load the file when run this function
+@hydra.main(config_path="conf", config_name="config") # use this syntax sugar to specify config file path and Hydra will load the 'config.yaml' file when run this function
 def my_app(cfg : DictConfig) -> None:
     print(OmegaConf.to_yaml(cfg)) # this will print the YAML file
     # access by:
@@ -290,10 +292,12 @@ python app.py --multirun db=mysql,postgresql # easily by this line it can run th
 
 when load config.yaml, the keyword 'defaults' tell it to load the configs in `/db/mysql.yaml`, key is folder name, value is file name. This is called config groups. To define these config groups you need to include a special directive at the beginning of every file `# @package [folder name]`.
 
+For example, line `- task: segmentation` will search for `/task/segmentation.yaml` to fill in the configurations.
+
 Thus by changing this 'defaults' in YAML or in command line can switch between different configs.
 
 ### Train
 
 The main entrance is `train.py`, which loads and overrides the `conf/config.yaml` and calls the real trainer `torch_points3d/trainer.py`.
 
-Windows has dataloader issue with multi-processing, so I changed `trainer.py` to be special on Windows
+Windows has dataloader issue with multi-processing, so I changed `trainer.py:108` to be special on Windows. Search `[HHH]` for edits.
