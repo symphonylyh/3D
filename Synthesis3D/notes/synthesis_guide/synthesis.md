@@ -37,13 +37,19 @@ Ballast rocks are reconstructed using laser scanner. These are textureless model
 
 They have reddish, grayish, and white colors. So I use SfM to reconstruction a few rocks of each color, and map the texture to all laser scanned models.
 
-I found the polygon mesh generated from the laser scanner sometimes contain irregular faces, so before calculating the surface area and volume, I apply Taubin smooth to the mesh.
+I found the polygon mesh generated from the laser scanner sometimes contain irregular faces, so before calculating the surface area and volume, I apply Taubin smooth to the mesh. Also, some faces are weirdly oriented, so apply re-orient all faces coherently.
 
-Then the mesh needs to be parameterization before assigning texture. I use Parameterization: Flat Plane.
+Then the mesh needs to be parameterized before assigning texture. I use Parameterization: Flat Plane.
 
-Finally, set the texture map for the mesh, convert texture to per-vertex color, and export as PLY model.
+Finally, set the texture map for the mesh, convert texture to per-vertex color, and export as PLY/obj model.
 
 The above steps are automated by this Pymeshlab [script]().
+
+#### Open3D
+
+Open3D does not load ply files properly. For example, the ply model output from Metashape has vertex color and texture coordinates, but Open3D only displays the vertex color (thus very blurred texture). After experiment, only obj format works well with Open3D. 
+
+Obj files exported from Metashape is well linked with texture. But the for the laser scan, we paste the texture to stl model and export as obj. Such Meshlab exported obj files are missing link to the correct texture, we need to manually add one line in the .mtl file `map_Kd [texture_file].jpg`.
 
 ### Mesh Re-centering/Simplification/Downsampling in MeshLab
 

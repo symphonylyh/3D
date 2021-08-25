@@ -14,7 +14,6 @@ num_folders = 120
 start_folder = 1
 end_folder = 120
 
-
 ### Create 120 particle folders
 # for i in range(1, num_folders+1):
 #     folder_name = os.path.join(root_path, rock_category, str(i))
@@ -71,7 +70,7 @@ for folderID in range(start_folder, end_folder+1):
 
     # calculate volume and area
     measures = ms.compute_geometric_measures()
-    print("[PRINT] %s: %d vertices, %d faces, area %.1f cm^2, volume %.1f cm^3" % (rock_category+'_'+str(folderID)+'.stl', ms.current_mesh().vertex_number(), ms.current_mesh().face_number(), measures['surface_area']/1e2, measures['mesh_volume']/1e3) )
+    print("[PRINT] %s: %d vertices, %d faces, area %.2f cm^2, volume %.2f cm^3" % (rock_category+'_'+str(folderID)+'.stl', ms.current_mesh().vertex_number(), ms.current_mesh().face_number(), measures['surface_area']/1e2, measures['mesh_volume']/1e3) )
 
     # laser scan unit is mm, convert to cm
     volumes[folderID-1] = measures['mesh_volume']/1e3
@@ -98,26 +97,26 @@ for folderID in range(start_folder, end_folder+1):
 
 
 # write volume and surface area stats to excel
-summary_spreadsheet = os.path.join(root_path, rock_category+'.xlsx')
+# summary_spreadsheet = os.path.join(root_path, rock_category+'.xlsx')
 
-if os.path.exists(summary_spreadsheet):
-    mode = 'a'
-    writer = pd.ExcelWriter(summary_spreadsheet, mode=mode, if_sheet_exists='replace')
-else:
-    mode = 'w'
-    writer = pd.ExcelWriter(summary_spreadsheet, mode=mode)
+# if os.path.exists(summary_spreadsheet):
+#     mode = 'a'
+#     writer = pd.ExcelWriter(summary_spreadsheet, mode=mode, if_sheet_exists='replace')
+# else:
+#     mode = 'w'
+#     writer = pd.ExcelWriter(summary_spreadsheet, mode=mode)
     
-if mode == 'a':
-    writer.book = openpyxl.load_workbook(summary_spreadsheet)
-    writer.sheets = dict((ws.title, ws) for ws in writer.book.worksheets)
-info = pd.DataFrame({
-    'Rock ID': np.arange(1,num_folders+1),
-    'Volume (cm^3)': volumes,
-    'Surface Area (cm^2)': areas,
-    'No. Vertices': num_vertices,
-    'No. Faces': num_faces
-})
-info.to_excel(writer, sheet_name='Metashape Stats',float_format='%.2f', index=False)
-writer.save()
+# if mode == 'a':
+#     writer.book = openpyxl.load_workbook(summary_spreadsheet)
+#     writer.sheets = dict((ws.title, ws) for ws in writer.book.worksheets)
+# info = pd.DataFrame({
+#     'Rock ID': np.arange(1,num_folders+1),
+#     'Volume (cm^3)': volumes,
+#     'Surface Area (cm^2)': areas,
+#     'No. Vertices': num_vertices,
+#     'No. Faces': num_faces
+# })
+# info.to_excel(writer, sheet_name='Metashape Stats',float_format='%.2f', index=False)
+# writer.save()
 
 
