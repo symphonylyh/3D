@@ -19,9 +19,9 @@ This section is a subsection of [3D segmentation section](./segmentation.md).
 * We want to add the torch-points3d repo as a subdirectory in my big 3D/Segmentation3D repo
   * Fork the repo on github web, now this forked repo has a link `https://github.com/symphonylyh/torch-points3d.git`
   * Go to the big 3D repo, add the forked repo as a subtree: `git subtree add --prefix Segmentation3D/Points3D https://github.com/symphonylyh/torch-points3d.git master --squash`. This will create a folder `3D/Segmentation3D/Points3D` which is the master branch of the torch-points3d repo. use `--squash` to merge as just one commit.
-  * Commit it in Github Desktop or by `git push origin master`. Now this repo is added as a subrepo
+  * Commit it in Github Desktop or by `git push origin main`. Now this repo is added as a subrepo
   * say the local repo is A, the forked repo is B, the original repo is C. ABC are different repos.
-  * General push just goes to A; to update A <--> B, `git subtree push --prefix Segmentation3D/Points3D https://github.com/symphonylyh/torch-points3d.git master` and `git subtree pull --prefix Segmentation3D/Points3D https://github.com/symphonylyh/torch-points3d.git master --squash`; to update B <-- C, on github web, click "Fetch Upstream" --> "Fetch and merge"
+  * General push just goes to A by `git pull/push origin main`; to update A <--> B, `git subtree push --prefix Segmentation3D/Points3D https://github.com/symphonylyh/torch-points3d.git master` and `git subtree pull --prefix Segmentation3D/Points3D https://github.com/symphonylyh/torch-points3d.git master --squash`; to update B <-- C, on github web, click "Fetch Upstream" --> "Fetch and merge"
 * A subdirectory can also be extracted to be a separate repo by subtree. Check out that later.
 
 ## Environment Setup
@@ -66,7 +66,7 @@ python -m unittest -v # tests related to sparseconv will fail, but others should
 python train.py task=segmentation models=segmentation/pointnet2 model_name=pointnet2_charlesssg data=segmentation/shapenet-fixed
 
 # test pointgroup
-python train.py task=panoptic models=panoptic/pointgroup model_name=PointGroup data=panoptic/s3disfused
+python train.py task=panoptic models=panoptic/pointgroup model_name=PointGroup data=panoptic/s3disfused training=pointgroup # however this will stuck and hung on both Windows and Ubuntu. Then, I gave up and switch to use the original PointGroup repo.
 ```
 
 At the time being, both sparse conv backend options (Minkowski Engine, or torchsparse) are not supported on Windows. So on Windows we can't use `from torch_points3d.applications.sparseconv3d import SparseConv3d` yet.
