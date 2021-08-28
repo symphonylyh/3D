@@ -8,6 +8,7 @@ import torch.optim as optim
 import time, sys, os, random
 from tensorboardX import SummaryWriter
 import numpy as np
+import os, re, importlib
 
 from util.config import cfg
 from util.log import logger
@@ -86,7 +87,8 @@ def train_epoch(train_loader, model, model_fn, optimizer, epoch):
 
     logger.info("epoch: {}/{}, train loss: {:.4f}, time: {}s".format(epoch, cfg.epochs, am_dict['loss'].avg, time.time() - start_epoch))
 
-    utils.checkpoint_save(model, cfg.exp_path, cfg.config.split('/')[-1][:-5], epoch, cfg.save_freq, use_cuda)
+    if (epoch + 1) % 10 == 0:
+        utils.checkpoint_save(model, cfg.exp_path, cfg.config.split('/')[-1][:-5], epoch, cfg.save_freq, use_cuda)
 
     for k in am_dict.keys():
         if k in visual_dict.keys():
@@ -161,15 +163,16 @@ if __name__ == '__main__':
     model_fn = model_fn_decorator()
 
     ##### dataset
-    if cfg.dataset == 'scannetv2':
-        if data_name == 'scannet':
-            import data.scannetv2_inst
-            dataset = data.scannetv2_inst.Dataset()
-            dataset.trainLoader()
-            dataset.valLoader()
-        else:
-            print("Error: no data loader - " + data_name)
-            exit(0)
+    if os.path.isfile(cfg.dataset_dir):
+        module_name = ".".join(re.split("[/.]", cfg.dataset_dir)[:-1])
+        print(module_name)
+        dataset_module = importlib.import_module(module_name)
+        dataset = dataset_module.Dataset()
+        dataset.trainLoader()
+        dataset.valLoader()
+    else:
+        print("Error: no data loader - " + data_name)
+        exit(0)
 
     ##### resume
     start_epoch = utils.checkpoint_restore(model, cfg.exp_path, cfg.config.split('/')[-1][:-5], use_cuda)      # resume from the latest epoch, or specify the epoch to restore

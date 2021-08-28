@@ -2,19 +2,19 @@ GENERAL:
   task: train  # train, test
   manual_seed: 123
   model_dir: model/pointgroup/pointgroup.py
-  dataset_dir: data/scannetv2_inst.py
+  dataset_dir: data/synthetic3d.py # definition of the dataset and dataloader
 
 DATA:
   data_root: dataset
-  dataset: scannetv2
-  filename_suffix: _inst_nostuff.pth
+  dataset: primitives3d_colorless
+  filename_suffix: .pth
 
-  classes: 20
+  classes: 3
   ignore_label: -100
 
   input_channel: 3
   scale: 50   # voxel_size = 1 / scale, scale 50(2cm)
-  batch_size: 4
+  batch_size: 5
   full_scale: [128, 512]
   max_npoint: 250000
   mode: 4 # 4=mean
@@ -28,7 +28,7 @@ STRUCTURE:
   use_coords: True
 
 TRAIN:
-  epochs: 10 #384
+  epochs: 100 #384
   train_workers: 16 # data loader workers
   optim: Adam # Adam or SGD
   lr: 0.001
@@ -69,8 +69,7 @@ TEST:
   TEST_SCORE_THRESH: 0.09
   TEST_NPOINT_THRESH: 100
 
-  eval: False #True # False if visualize
-  save_semantic: True #False True if visualize
+  eval: True
+  save_semantic: False
   save_pt_offsets: False
-  save_instance: True #False # True if visualize
-
+  save_instance: False

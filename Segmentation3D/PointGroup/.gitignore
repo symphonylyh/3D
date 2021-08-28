@@ -65,9 +65,21 @@ dist/
 *.tsv
 *.npy
 *.zip
-dataset/scannetv2/train
-dataset/scannetv2/val
-dataset/scannetv2/test
-dataset/scannetv2/val_gt
+
+# ignore dataset but keep some data processing scripts
+dataset/*
+!dataset/scannetv2/
+dataset/scannetv2/*
+!dataset/scannetv2/*.py
+!dataset/primitives3d/
+dataset/primitives3d/*
+!dataset/primitives3d/*.py
+!dataset/primitives3d_colorless/
+dataset/primitives3d_colorless/*
+!dataset/primitives3d_colorless/*.py
+!dataset/synthetic3d/
+dataset/synthetic3d/*
+!dataset/synthetic3d/*.py
+
 
 
