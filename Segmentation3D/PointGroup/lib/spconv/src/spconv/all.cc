@@ -17,7 +17,7 @@
 #include <spconv/spconv_ops.h>
 
 static auto registry =
-    torch::RegisterOperators("spconv::get_indice_pairs_2d", &spconv::getIndicePair<2>)
+    torch::jit::RegisterOperators("spconv::get_indice_pairs_2d", &spconv::getIndicePair<2>)
         .op("spconv::get_indice_pairs_3d", &spconv::getIndicePair<3>)
         .op("spconv::get_indice_pairs_grid_2d", &spconv::getIndicePairPreGrid<2>)
         .op("spconv::get_indice_pairs_grid_3d", &spconv::getIndicePairPreGrid<3>)
