@@ -60,7 +60,7 @@ exp/
 *.egg-info/
 build/
 dist/
-lib/spconv
+#lib/spconv
 
 *.tsv
 *.npy
