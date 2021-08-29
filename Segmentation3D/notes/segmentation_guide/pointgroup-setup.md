@@ -2,6 +2,17 @@ Date: 06/2021
 
 ## PointGroup Guide
 
+### Github Setup
+
+* We want to fork pointgroup and get up to date with the original repo (although it doesn't seem to update since 2020)
+* We want to add the pointgroup repo as a subdirectory in my big 3D/Segmentation3D repo
+  * Fork the repo on github web, now this forked repo has a link `https://github.com/symphonylyh/PointGroup.git`
+  * Go to the big 3D repo, add the forked repo as a subtree: `git subtree add --prefix Segmentation3D/PointGroup https://github.com/symphonylyh/PointGroup.git master --squash`. This will create a folder `3D/Segmentation3D/Points3D` which is the master branch of the torch-points3d repo. use `--squash` to merge as just one commit.
+  * Commit it in Github Desktop or by `git push origin main`. Now this repo is added as a subrepo
+  * say the local repo is A, the forked repo is B, the original repo is C. ABC are different repos.
+  * General push just goes to A by `git pull/push origin main`; to update A <--> B, `git subtree push --prefix Segmentation3D/Points3D https://github.com/symphonylyh/torch-points3d.git master` and `git subtree pull --prefix Segmentation3D/Points3D https://github.com/symphonylyh/torch-points3d.git master --squash`; to update B <-- C, on github web, click "Fetch Upstream" --> "Fetch and merge"
+* A subdirectory can also be extracted to be a separate repo by subtree. Check out that later.
+
 ### Setup
 
 Note: pointgroup is based on spconv which is not supported on Windows. So the setup guide is linux only. Our linux machine has RTX 3090 so can only support CUDA >= 11. Fortunately, pointgroup code turns out to be compatible with CUDA 11.
@@ -35,6 +46,7 @@ Other dependencies are easier to handle
 
 ```bash
 /home/luojiayi/anaconda3/envs/pytorch180cudnn111/bin/pip install plyfile tensorboardX pyyaml scipy
+conda install -c anaconda mayavi # visualization
 
 cd lib/pointgroup_ops
 python setup.py develop
@@ -42,13 +54,74 @@ python setup.py develop
 
 Success!
 
-### Test
+### Dataset Preparation
+
+For training with own data, the authors give some advice in this [issue](https://github.com/dvlab-research/PointGroup/issues/3), for example changing the input channel and dataloader etc.
+
+First we need to understand how Scannetv2 dataset looks like:
+
+* `[scene]_vh_clean_2.ply`: low-res RGB mesh. Points has (x,y,z,r,g,b,a). +Z is upright direction. RGB is 0-255
+* `[scene]_vh_clean_2.labels.ply`: low-res label mesh. Points has (x,y,z,r,g,b,a,sem_label)
+* `[scene]_vh_clean_2.0.010000.segs.json`: low-res segment/part index. Each object instance has several segments (parts, called over-segmentation), and each segment is assigned a unique ID called `segIndices` in this file (not necessarily starts from 0, but is unique per segment). And then, this file give the per-vertex segment index, e.g., adjacent points forming the segment has the same segment index.
+* `[scene].aggregation.json`: low-res instance-level semantic segmentation. Each object contains a list of segIndices, i.e., the segments that form this object instance. So to get instance label for each point will need map between segs.json and aggregation.json
+
+Then we need to understand how PointGroup pre-process the above files into a pth file. See [prepare_data_inst.py](../../PointGroup/dataset/scannetv2/prepare_data_inst.py).
+
+* point (x,y,z) centered around the origin, i.e. subtract mean(x,y,z)
+* color normalized to [-1,1] range
+* collect per-point semantic label from `lables.ply`. Semantic label starts from 0 to nclass-1. Unknown classes have label of -100
+* create a map between segment ID --> point indices belonging to this segment, from `segs.json`
+* collect per-point instance label by merging the segments, from `aggregation.json`. Instance label starts from 0. Unknown points have label of -100
+* save (coords, colors, sem_labels, instance_labels) into a pth file. For test split, no sem and ins labels are generated
+* Different from GICN, the entire scene is passed instead of dividing into blocks
+
+The above pre-processing is for training. For evaluation on validation, we should further use [prepare_data_inst_gttxt.py](../../PointGroup/dataset/scannetv2/prepare_data_inst_gttxt.py) that generate instance ground truth file under `/val_gt/[scene].txt`. PointGroup used a weird encoding `x00y` that x is semantic label, y is instance label and they do x*1000+y+1, assuming less than 1000 instances. And instead of -100, now unannotated semantic & instance labels is 0. Semantic labels is nyu40 labels instead of 0 to nclass-1.
+
+```bash
+cd dataset/scannetv2
+
+python prepare_data_inst.py --data_split train # val, test as well, into .pth files
+python prepare_data_inst_gttxt.py # by default work on val set
+```
+
+Finally we can process our own dataset. Since we already generate all labels in a ply file, it's easier in our case to generate such pth file. See [prepare_data.py](../../PointGroup/dataset/primitives3d/prepare_data.py). Note that our data is double, we need to convert to float since pointgroup cuda operation requires torch float tensor, so we need cast to np.float32 during data pre-processing.
+
+```bash
+cd dataset/primitives3d
+
+python prepare_data.py --data_split train # val, test as well, into .pth files
+```
+
+### Dataloader
+
+The dataloader is defined in  [scannetv2_inst.py](../../PointGroup/data/scannetv2_inst.py). For each pth, `trainMerge` is called as the transform, which does:
+
+* Data augmentation: initialize a 3x3 transformation matrix as identity E. jitter - add ~0.1*N(0,1) to E. flip: make E[0,0]=-1 or 1, i.e. flip x randomly. rotate: apply a [0,2pi] rotation to the points. **Train does all three. Val and Test do not jitter**. And the performance varies a little, see this [issue](https://github.com/dvlab-research/PointGroup/issues/24#issue-724009279).
+* Data augmentation: elastic distortion. Elastic distortion has a granularity and magnitude, see points3D [doc](https://torch-points3d.readthedocs.io/en/latest/src/api/transforms.html#torch_points3d.core.data_transform.ElasticDistortion). The description of elastic distortion can date back to this [paper](https://cognitivemedium.com/assets/rmnist/Simard.pdf). In [Minkowski Engine paper](https://arxiv.org/pdf/1904.08755.pdf), they mentioned "Since the dataset is purely synthetic, we added various noise to the input point clouds to simulate noisy observations. We used elastic distortion, Gaussian noise, and chromatic shift in the color for the noisy 4D Synthia experiments". Our synthetic dataset may apply these too. **Train distort, Val and Test don't distort.**
+* Crop: if the number of points exceed the threshold, partial scene is cropped. **Train and Val crop, Test doesn't crop**.
+* Merge: one data sample is a scene, and the batch will merge multiple scenes together. Therefore, in each forward pass the dimension of the batch may differ. The instance label accumulates. For example, scene A and B both have instances 0-10, then scene B instance label will become 11-20. `batch_offsets` is the cumulative batch start point ID, `locs` (N, 4) is (batch_id, x,y,z) for all points.
+* Voxelize: Pointgroup divide with voxel size 0.02m, i.e. multiple the coords by 50. The coords are passed to CUDA operations, see [`pointgroup_ops.py`](../../PointGroup/lib/pointgroup_ops/functions/pointgroup_ops.py) for the API. This is a wrapper around the compiled CUDA code in PG_OP. The real CUDA code is under `lib/pointgroup_ops/src/voxelize/voxelize.cu`. To further understand the code, in `voxelize.cpp` `SparseGrids` is a Google spatial hash structure that maps a voxel coord (x,y,z) to a voxel index (linearized ID). In `voxelize_inputmap()`, points hash into voxels. The number of active voxels (M, voxels that contain at least one point) and the list of points inside each voxel are recorded. SpConv allows different modes: mode 0=guaranteed unique 1=last item(overwrite) 2=first item(keep) 3=sum, 4=mean. PointGroup uses mode 4=mean. It seems this mean doesn't mean average, it still`input_map or p2v_map` maps point ID to voxel ID (N-to-1 map), `output_map or v2p_map` maps back (1-to-N) map. 
+
+### Train
 
 Pointgroup repo has command to train on Scannet v2, we need to download partial Scannet. We can find the download script `/torch-point3d/scripts/datasets/download-scannet.py`. And use `python download-scannet.py -o . --type ... --id scene0000_00`. The meaning of each file can be found [here](http://www.scan-net.org/ScanNet/). Then prepare the dataset structure as Pointgroup requires and generate the [scene]_inst_nostuff.pth for training. Remember if we only use one or two scenes in the train dataset, we need to change the batch size to 1 or 2 in `pointgroup/config/pointgroup_run1_scannet.yaml` otherwise the dataloader is empty. Also change the epoch in the yaml file to a small number.
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 python train.py --config config/pointgroup_run1_scannet.yaml 
+CUDA_VISIBLE_DEVICES=0 python train.py --config config/pointgroup_run1_scannet.yaml # models will be under /exp
+
+python train.py --config config/pointgroup_default_primitives3d.yaml # own dataset
+
+tensorboard --logdir=./exp # create tensorboard session
 ```
 
+### Test and Inference
 
+After downloading the pretrained model
+
+```bash
+python test.py --config config/pointgroup_run1_scannet.yaml # change split: val, eval: True, this will, test_epoch to whatever epoch you want to test
+
+cd util
+python visualize.py --data_root=../dataset/scannetv2 --result_root=../exp/scannetv2/pointgroup/pointgroup_default_scannet/result/epoch384_nmst0.3_scoret0.09_npointt100 --room_name=scene0000_00 --room_split=test --task=instance_pred
+```
 
