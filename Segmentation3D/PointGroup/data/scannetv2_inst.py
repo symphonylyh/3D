@@ -210,7 +210,7 @@ class Dataset:
 
             locs.append(torch.cat([torch.LongTensor(xyz.shape[0], 1).fill_(i), torch.from_numpy(xyz).long()], 1))
             locs_float.append(torch.from_numpy(xyz_middle))
-            feats.append(torch.from_numpy(rgb) + torch.randn(3) * 0.1)
+            feats.append(torch.from_numpy(rgb) + torch.randn(3) * 0.1) # feature jitter (could be added into self.dataAugment()?)
             labels.append(torch.from_numpy(label))
             instance_labels.append(torch.from_numpy(instance_label))
 

@@ -7,7 +7,7 @@ import torch
 import time
 import numpy as np
 import random
-import os
+import os, re, importlib
 
 from util.config import cfg
 cfg.task = 'test'
@@ -40,14 +40,16 @@ def init():
 def test(model, model_fn, data_name, epoch):
     logger.info('>>>>>>>>>>>>>>>> Start Evaluation >>>>>>>>>>>>>>>>')
 
-    if cfg.dataset == 'scannetv2':
-        if data_name == 'scannet':
-            from data.scannetv2_inst import Dataset
-            dataset = Dataset(test=True)
-            dataset.testLoader()
-        else:
-            print("Error: no data loader - " + data_name)
-            exit(0)
+    ##### dataset
+    if os.path.isfile(cfg.dataset_dir):
+        module_name = ".".join(re.split("[/.]", cfg.dataset_dir)[:-1])
+        dataset_module = importlib.import_module(module_name)
+        dataset = dataset_module.Dataset(test=True)
+        dataset.testLoader()
+    else:
+        print("Error: no data loader - " + data_name)
+        exit(0)
+
     dataloader = dataset.test_data_loader
 
     with torch.no_grad():

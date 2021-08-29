@@ -165,7 +165,6 @@ if __name__ == '__main__':
     ##### dataset
     if os.path.isfile(cfg.dataset_dir):
         module_name = ".".join(re.split("[/.]", cfg.dataset_dir)[:-1])
-        print(module_name)
         dataset_module = importlib.import_module(module_name)
         dataset = dataset_module.Dataset()
         dataset.trainLoader()
