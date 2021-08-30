@@ -369,6 +369,7 @@ class PointCloudVis:
         sem_keys, ins_keys = np.unique(sem_labels), np.unique(ins_labels)
         sem_colors = PointCloudVis.random_colors(len(sem_keys)) 
         ins_colors = PointCloudVis.random_colors(len(ins_keys))
+        print('ins_keys', len(ins_keys))
         
         print(f"Total: {len(sem_keys)} classes, {len(ins_keys)} instances")
 
@@ -421,7 +422,7 @@ class PointCloudVis:
                     else:
                         bbox_wireframe.paint_uniform_color(ins_colors[id])
                     
-                    plot_handle.scene.add_geometry(f"Instance BBox {id}", bbox_wireframe, PointCloudVis.get_default_material_lineset())
+                    # plot_handle.scene.add_geometry(f"Instance BBox {id}", bbox_wireframe, PointCloudVis.get_default_material_lineset())
 
                     if show_instance_label:
                         

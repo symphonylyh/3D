@@ -8,6 +8,8 @@ import time
 import numpy as np
 import random
 import os, re, importlib
+import plyfile
+from vis.plot3d import Plot3DApp, Plot3DFigure, PointCloudVis as pcvis
 
 from util.config import cfg
 cfg.task = 'test'
@@ -80,7 +82,7 @@ def test(model, model_fn, epoch):
             # proposals_idx: (sumNPoint, 2), int, cpu, dim 0 for cluster_id, dim 1 for corresponding point idxs in N
             # proposals_offset: (nProposal + 1), int, cpu
             proposals_pred = torch.zeros((proposals_offset.shape[0] - 1, N), dtype=torch.int, device=scores_pred.device) # (nProposal, N), int, cuda
-            proposals_pred[proposals_idx[:, 0].long(), proposals_idx[:, 1].long()] = 1
+            proposals_pred[proposals_idx[:, 0].long(), proposals_idx[:, 1].long()] = 1 # one-hot point mask for proposals
 
             semantic_id = torch.tensor(semantic_label_idx, device=scores_pred.device)[semantic_pred[proposals_idx[:, 1][proposals_offset[:-1].long()].long()]] # (nProposal), long
 
@@ -107,14 +109,13 @@ def test(model, model_fn, epoch):
             print(proposals_idx[:, 1][proposals_offset[:-1].long()].long())
             print(proposals_idx.shape)
 
-            return
-            ##### score threshold
+            ##### score threshold (only proposals with high score are preserved)
             score_mask = (scores_pred > cfg.TEST_SCORE_THRESH)
             scores_pred = scores_pred[score_mask]
             proposals_pred = proposals_pred[score_mask]
             semantic_id = semantic_id[score_mask]
 
-            ##### npoint threshold
+            ##### npoint threshold (only proposals with enough points are preserved)
             proposals_pointnum = proposals_pred.sum(1)
             npoint_mask = (proposals_pointnum > cfg.TEST_NPOINT_THRESH)
             scores_pred = scores_pred[npoint_mask]
@@ -137,7 +138,41 @@ def test(model, model_fn, epoch):
             cluster_semantic_id = semantic_id[pick_idxs]
 
             nclusters = clusters.shape[0]
+            
+            ##### write to PLY file
+            coords_np = batch['locs_float'].numpy() # 0～2
+            colors_np = batch['feats'].numpy() # 3～5, [-1,1]
+            sem_labels_np = semantic_pred.cpu().numpy()[:,np.newaxis] # 6
+            instances = clusters.cpu().numpy()
+            instances_scores = cluster_scores.cpu().numpy()
+            ins_labels_np = np.zeros((N, 1)) # per-point ins label, 1~N. 0 means not an instance
+            ins_scores_np = np.zeros((N, 1)) # confidence of instance score (per-instance, but assigned as per-point, same for all points of the same instance. 0 means not an instance
+            for ins in range(instances.shape[0]):
+                print(f'instance {ins}: {np.nonzero(instances[ins])[0].shape[0]} points')
+                ins_labels_np[np.nonzero(instances[ins])] = ins + 1 # 7
+                ins_scores_np[np.nonzero(instances[ins])] = instances_scores[ins] # 8
+            offsets_np = pt_offsets.cpu().numpy() # 9:11
+            results = np.concatenate([coords_np, colors_np, sem_labels_np, ins_labels_np, ins_scores_np, offsets_np], axis=1)
+            
 
+            pc_xyzrgb = results[:,:6][np.newaxis,:,:]
+            pc_xyzrgbsemins = results[:,:8][np.newaxis,:,:]
+            app = Plot3DApp()
+
+            fig1 = app.create_figure(figure_name='Fig 1', viewports_dim=(1,3), width=1920, height=720, sync_camera=True, plot_boundary=True, show_axes=True, show_subtitles=True, background_color=(1,1,1,1), snapshot_path='./')
+            
+            fig1a = fig1.set_subplot(0,0,'Raw Point Cloud')
+            pcvis.draw_pc_raw(fig1a, pc_xyzrgb)
+            fig1b = fig1.set_subplot(0,1,'Point Cloud by Semantic')
+            pcvis.draw_pc_by_semins(fig1b, pc_xyzrgbsemins, sem_dict=None, color_code='semantic', show_legend=True)
+            fig1c = fig1.set_subplot(0,2,'Point Cloud by Instance')
+            pcvis.draw_pc_by_semins(fig1c, pc_xyzrgbsemins, sem_dict=None, color_code='instance', show_bbox=True)
+
+            fig1.ready()
+            app.plot()
+            app.close()
+
+            return
             ##### prepare for evaluation
             if cfg.eval:
                 pred_info = {}
@@ -152,12 +187,12 @@ def test(model, model_fn, epoch):
 
             ##### save files
             start3 = time.time()
-            if cfg.save_semantic:
+            if cfg.save_semantic: # per-point semantic label
                 os.makedirs(os.path.join(result_dir, 'semantic'), exist_ok=True)
                 semantic_np = semantic_pred.cpu().numpy()
-                np.save(os.path.join(result_dir, 'semantic', test_scene_name + '.npy'), semantic_np)
+                np.save(os.path.join(result_dir, 'semantic', test_scene_name + '.npy'), semantic_np) # (N) long 
 
-            if cfg.save_pt_offsets:
+            if cfg.save_pt_offsets: # point coords and offset vectors
                 os.makedirs(os.path.join(result_dir, 'coords_offsets'), exist_ok=True)
                 pt_offsets_np = pt_offsets.cpu().numpy()
                 coords_np = batch['locs_float'].numpy()
@@ -171,7 +206,7 @@ def test(model, model_fn, epoch):
                     clusters_i = clusters[proposal_id].cpu().numpy()  # (N)
                     semantic_label = np.argmax(np.bincount(semantic_pred[np.where(clusters_i == 1)[0]].cpu()))
                     score = cluster_scores[proposal_id]
-                    f.write('predicted_masks/{}_{:03d}.txt {} {:.4f}'.format(test_scene_name, proposal_id, semantic_label_idx[semantic_label], score))
+                    f.write('predicted_masks/{}_{:03d}.txt {} {:.4f}'.format(test_scene_name, proposal_id, semantic_label, score))
                     if proposal_id < nclusters - 1:
                         f.write('\n')
                     np.savetxt(os.path.join(result_dir, 'predicted_masks', test_scene_name + '_%03d.txt' % (proposal_id)), clusters_i, fmt='%d')
@@ -182,6 +217,8 @@ def test(model, model_fn, epoch):
 
             ##### print
             logger.info("instance iter: {}/{} point_num: {} ncluster: {} time: total {:.2f}s inference {:.2f}s save {:.2f}s".format(batch['id'][0] + 1, len(dataset.test_files), N, nclusters, end, end1, end3))
+
+            return # run just one scene
 
         ##### evaluation
         if cfg.eval:
