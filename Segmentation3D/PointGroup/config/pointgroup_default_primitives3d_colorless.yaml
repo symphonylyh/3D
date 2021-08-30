@@ -57,11 +57,11 @@ GROUP:
   cluster_shift_meanActive: 300
   cluster_npoint_thre: 50
 
-  prepare_epochs: 128
+  prepare_epochs: 50 #128
 
 TEST:
-  split: val
-  test_epoch: 384
+  split: test
+  test_epoch: 99
   test_workers: 16
   test_seed: 567
 
@@ -69,7 +69,7 @@ TEST:
   TEST_SCORE_THRESH: 0.09
   TEST_NPOINT_THRESH: 100
 
-  eval: True
-  save_semantic: False
+  eval: False # True for val, Fals for test (no ground-truth)
+  save_semantic: True
   save_pt_offsets: False
-  save_instance: False
+  save_instance: True 

@@ -131,7 +131,6 @@ if __name__ == '__main__':
     ##### get model version and data version
     exp_name = cfg.config.split('/')[-1][:-5] # pointgroup_run1_scannet
     model_name = exp_name.split('_')[0]
-    data_name = exp_name.split('_')[-1]
 
     ##### model
     logger.info('=> creating model ...')
@@ -170,7 +169,7 @@ if __name__ == '__main__':
         dataset.trainLoader()
         dataset.valLoader()
     else:
-        print("Error: no data loader - " + data_name)
+        print("Error: no data loader - " + module_name)
         exit(0)
 
     ##### resume

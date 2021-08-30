@@ -59,73 +59,96 @@ def test(model, model_fn, epoch):
         matches = {}
         for i, batch in enumerate(dataloader):
             N = batch['feats'].shape[0]
-            test_scene_name = dataset.test_file_names[int(batch['id'][0])].split('/')[-1][:12]
+            test_scene_name = dataset.test_file_names[int(batch['id'][0])].split('/')[-1][:-4]
 
-            print(test_scene_name)
-            return
             start1 = time.time()
             preds = model_fn(batch, model, epoch)
             end1 = time.time() - start1
 
             ##### get predictions (#1 semantic_pred, pt_offsets; #2 scores, proposals_pred)
-            semantic_scores = preds['semantic']  # (N, nClass=20) float32, cuda
+            semantic_scores = preds['semantic']  # (N, nClass=3) float32, cuda
             semantic_pred = semantic_scores.max(1)[1]  # (N) long, cuda
 
+            print(semantic_pred.shape[0], torch.sum(semantic_pred==0).item(), torch.sum(semantic_pred==1).item(), torch.sum(semantic_pred==2).item())
+            
             pt_offsets = preds['pt_offsets']    # (N, 3), float32, cuda
 
-            if (epoch > cfg.prepare_epochs):
-                scores = preds['score']   # (nProposal, 1) float, cuda
-                scores_pred = torch.sigmoid(scores.view(-1))
+            scores = preds['score']   # (nProposal, 1) float, cuda
+            scores_pred = torch.sigmoid(scores.view(-1))
 
-                proposals_idx, proposals_offset = preds['proposals']
-                # proposals_idx: (sumNPoint, 2), int, cpu, dim 0 for cluster_id, dim 1 for corresponding point idxs in N
-                # proposals_offset: (nProposal + 1), int, cpu
-                proposals_pred = torch.zeros((proposals_offset.shape[0] - 1, N), dtype=torch.int, device=scores_pred.device) # (nProposal, N), int, cuda
-                proposals_pred[proposals_idx[:, 0].long(), proposals_idx[:, 1].long()] = 1
+            proposals_idx, proposals_offset = preds['proposals']
+            # proposals_idx: (sumNPoint, 2), int, cpu, dim 0 for cluster_id, dim 1 for corresponding point idxs in N
+            # proposals_offset: (nProposal + 1), int, cpu
+            proposals_pred = torch.zeros((proposals_offset.shape[0] - 1, N), dtype=torch.int, device=scores_pred.device) # (nProposal, N), int, cuda
+            proposals_pred[proposals_idx[:, 0].long(), proposals_idx[:, 1].long()] = 1
 
-                semantic_id = torch.tensor(semantic_label_idx, device=scores_pred.device)[semantic_pred[proposals_idx[:, 1][proposals_offset[:-1].long()].long()]] # (nProposal), long
+            semantic_id = torch.tensor(semantic_label_idx, device=scores_pred.device)[semantic_pred[proposals_idx[:, 1][proposals_offset[:-1].long()].long()]] # (nProposal), long
 
-                ##### score threshold
-                score_mask = (scores_pred > cfg.TEST_SCORE_THRESH)
-                scores_pred = scores_pred[score_mask]
-                proposals_pred = proposals_pred[score_mask]
-                semantic_id = semantic_id[score_mask]
+            semantic_id = semantic_pred[proposals_idx[:, 1][proposals_offset[:-1].long()].long()] # (nProposal), long
 
-                ##### npoint threshold
-                proposals_pointnum = proposals_pred.sum(1)
-                npoint_mask = (proposals_pointnum > cfg.TEST_NPOINT_THRESH)
-                scores_pred = scores_pred[npoint_mask]
-                proposals_pred = proposals_pred[npoint_mask]
-                semantic_id = semantic_id[npoint_mask]
+            num_proposals = proposals_offset.shape[0]-1
+            print(f'{num_proposals} proposals')
+            print(proposals_offset)
+            for prop_i in range(num_proposals):
+                start_idx, end_idx = proposals_offset[prop_i], proposals_offset[prop_i + 1] # [start, end)
+                
+                # verify all points in each proposal is of the same instance & same sem class
+                proposal_id = proposals_idx[start_idx,0]
+                proposal_sem = semantic_pred[proposals_idx[start_idx,1]]
+                # print(f'proposal {proposal_id}: class {proposal_sem}')
+                # for point_idx in range(start_idx, end_idx):
+                #     assert proposals_idx[point_idx,0] == proposal_id
+                #     assert semantic_pred[proposals_idx[point_idx,1]] == proposal_sem
 
-                ##### nms
-                if semantic_id.shape[0] == 0:
-                    pick_idxs = np.empty(0)
-                else:
-                    proposals_pred_f = proposals_pred.float()  # (nProposal, N), float, cuda
-                    intersection = torch.mm(proposals_pred_f, proposals_pred_f.t())  # (nProposal, nProposal), float, cuda
-                    proposals_pointnum = proposals_pred_f.sum(1)  # (nProposal), float, cuda
-                    proposals_pn_h = proposals_pointnum.unsqueeze(-1).repeat(1, proposals_pointnum.shape[0])
-                    proposals_pn_v = proposals_pointnum.unsqueeze(0).repeat(proposals_pointnum.shape[0], 1)
-                    cross_ious = intersection / (proposals_pn_h + proposals_pn_v - intersection)
-                    pick_idxs = non_max_suppression(cross_ious.cpu().numpy(), scores_pred.cpu().numpy(), cfg.TEST_NMS_THRESH)  # int, (nCluster, N)
-                clusters = proposals_pred[pick_idxs]
-                cluster_scores = scores_pred[pick_idxs]
-                cluster_semantic_id = semantic_id[pick_idxs]
+                print(proposals_idx[start_idx])
 
-                nclusters = clusters.shape[0]
+            print(semantic_pred[0], semantic_pred[4221])
+            print(proposals_idx[:10,:])
+            print(proposals_idx[:, 1][proposals_offset[:-1].long()].long())
+            print(proposals_idx.shape)
 
-                ##### prepare for evaluation
-                if cfg.eval:
-                    pred_info = {}
-                    pred_info['conf'] = cluster_scores.cpu().numpy()
-                    pred_info['label_id'] = cluster_semantic_id.cpu().numpy()
-                    pred_info['mask'] = clusters.cpu().numpy()
-                    gt_file = os.path.join(cfg.data_root, cfg.dataset, cfg.split + '_gt', test_scene_name + '.txt')
-                    gt2pred, pred2gt = eval.assign_instances_for_scan(test_scene_name, pred_info, gt_file)
-                    matches[test_scene_name] = {}
-                    matches[test_scene_name]['gt'] = gt2pred
-                    matches[test_scene_name]['pred'] = pred2gt
+            return
+            ##### score threshold
+            score_mask = (scores_pred > cfg.TEST_SCORE_THRESH)
+            scores_pred = scores_pred[score_mask]
+            proposals_pred = proposals_pred[score_mask]
+            semantic_id = semantic_id[score_mask]
+
+            ##### npoint threshold
+            proposals_pointnum = proposals_pred.sum(1)
+            npoint_mask = (proposals_pointnum > cfg.TEST_NPOINT_THRESH)
+            scores_pred = scores_pred[npoint_mask]
+            proposals_pred = proposals_pred[npoint_mask]
+            semantic_id = semantic_id[npoint_mask]
+
+            ##### nms
+            if semantic_id.shape[0] == 0:
+                pick_idxs = np.empty(0)
+            else:
+                proposals_pred_f = proposals_pred.float()  # (nProposal, N), float, cuda
+                intersection = torch.mm(proposals_pred_f, proposals_pred_f.t())  # (nProposal, nProposal), float, cuda
+                proposals_pointnum = proposals_pred_f.sum(1)  # (nProposal), float, cuda
+                proposals_pn_h = proposals_pointnum.unsqueeze(-1).repeat(1, proposals_pointnum.shape[0])
+                proposals_pn_v = proposals_pointnum.unsqueeze(0).repeat(proposals_pointnum.shape[0], 1)
+                cross_ious = intersection / (proposals_pn_h + proposals_pn_v - intersection)
+                pick_idxs = non_max_suppression(cross_ious.cpu().numpy(), scores_pred.cpu().numpy(), cfg.TEST_NMS_THRESH)  # int, (nCluster, N)
+            clusters = proposals_pred[pick_idxs]
+            cluster_scores = scores_pred[pick_idxs]
+            cluster_semantic_id = semantic_id[pick_idxs]
+
+            nclusters = clusters.shape[0]
+
+            ##### prepare for evaluation
+            if cfg.eval:
+                pred_info = {}
+                pred_info['conf'] = cluster_scores.cpu().numpy()
+                pred_info['label_id'] = cluster_semantic_id.cpu().numpy()
+                pred_info['mask'] = clusters.cpu().numpy()
+                gt_file = os.path.join(cfg.data_root, cfg.dataset, cfg.split + '_gt', test_scene_name + '.txt')
+                gt2pred, pred2gt = eval.assign_instances_for_scan(test_scene_name, pred_info, gt_file)
+                matches[test_scene_name] = {}
+                matches[test_scene_name]['gt'] = gt2pred
+                matches[test_scene_name]['pred'] = pred2gt
 
             ##### save files
             start3 = time.time()
