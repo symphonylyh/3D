@@ -43,7 +43,7 @@ Then the mesh needs to be parameterized before assigning texture. I use Paramete
 
 Finally, set the texture map for the mesh, convert texture to per-vertex color, and export as PLY/obj model.
 
-The above steps are automated by this Pymeshlab [script]().
+The above steps are automated by this Pymeshlab [script](../../../Reconstruction3D/metashape-workflow/mes.py).
 
 #### Open3D
 
@@ -83,7 +83,18 @@ To scripting Blender, two options are available:
 
 * `pip install bpy` [link](https://pypi.org/project/bpy/) is available but not officially supported. 
 
-The batch processing Python script is [here](../../synthesis-workflow/blender_entry.py) and [here](../../synthesis-workflow/blender_LOD_merge.py). Note that there is a tricky thing about the scale. Since FBX use 1 unit = 1cm by default, we need to set the scene scale to 0.01 (i.e. 1 Blender unit=0.01m=1cm). The scale is set in script  [here](../../synthesis-workflow/blender_LOD_merge.py). If scene scale is 1.0 (1 Blender unit=1m), when importing obj (in cm unit, e.g. a 10cm rock), the object will only take 0.1 Blender unit. And when exporting as fbx, it will be 0.1 Blender unit=0.1cm. Therefore it's downscaled by a factor of 100...
+The batch processing Python script is [here](../../synthesis-workflow/blender_entry.py) and [here](../../synthesis-workflow/blender_LOD_merge.py). 
+
+Usage: 
+
+```python
+# change the folder information in the python file
+
+python blender_entry.py # this will generate xx_LODs.fbx
+python gather_LODs.py # this will collect all LODs.fbx
+```
+
+Note that there is a tricky thing about the scale. Since FBX use 1 unit = 1cm by default, we need to set the scene scale to 0.01 (i.e. 1 Blender unit=0.01m=1cm). The scale is set in script  [here](../../synthesis-workflow/blender_LOD_merge.py). If scene scale is 1.0 (1 Blender unit=1m), when importing obj (in cm unit, e.g. a 10cm rock), the object will only take 0.1 Blender unit. And when exporting as fbx, it will be 0.1 Blender unit=0.1cm. Therefore it's downscaled by a factor of 100...
 
 To collect all the LOD models to be used as Unity assets, use this [script](../../synthesis-workflow/gather_LODs.py).
 
@@ -98,7 +109,7 @@ Blender tips:
 
 Now the `.fbx` can be imported to Unity along with the corresponding texture `.jpg` file. But what's imported is still the "model" instead of "prefab". Prefab contains Unity components, such as "RigidBody", "Mesh Collider" that we care most.
 
-For this, open any empty scene and drag the models into it (**Important: set the scale factor to 100 in the model import setting**). Select all the models and go to menu `Synthesis3D > FBX to Prefab`. The editor script [`FBX2Prefabs.cs`](../../synthesis-workflow/synthesis3D/Assets/Synthesis3D/Editor/FBX2Prefabs.cs) will be executed and saved models as prefabs.
+For this, open any empty scene and drag the models into it (**Important: before dragging, select all models, the inspector will show "xx_LODs Import Settings", batch set the scale factor to 100**). Select all the models and go to menu `Synthesis3D > FBX to Prefab`. The editor script [`FBX2Prefabs.cs`](../../synthesis-workflow/synthesis3D/Assets/Synthesis3D/Editor/FBX2Prefabs.cs) will be executed and saved models as prefabs.
 
 The editor script:
 
@@ -106,7 +117,7 @@ The editor script:
 * Add Rigidbody. Note that the collision detection mode can be set as Discrete (may miss high speed object) or Continuous Dynamic (accurate but costly)
 * Add Mesh collider. Set the collider mesh as the coarsest LOD level.
 
-Since later on we need ray casting to read the texture pixels, remember to enable read/write for texture files. Select all textures -- Import Settings -- Advanced -- tick "Read/Write Enabled".
+Since later on we need ray casting to read the texture pixels, **Important: remember to enable read/write for texture files. Select all textures -- Import Settings -- Advanced -- tick "Read/Write Enabled"**.
 
 ## Synthetic Data Generation in Unity
 

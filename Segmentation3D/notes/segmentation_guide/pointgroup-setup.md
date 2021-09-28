@@ -50,6 +50,8 @@ conda install -c anaconda mayavi # visualization
 
 cd lib/pointgroup_ops
 python setup.py develop
+
+/home/luojiayi/anaconda3/envs/pytorch180cudnn111/bin/pip install open3d
 ```
 
 Success!
@@ -100,7 +102,7 @@ The dataloader is defined in  [scannetv2_inst.py](../../PointGroup/data/scannetv
 * Data augmentation: elastic distortion. Elastic distortion has a granularity and magnitude, see points3D [doc](https://torch-points3d.readthedocs.io/en/latest/src/api/transforms.html#torch_points3d.core.data_transform.ElasticDistortion). The description of elastic distortion can date back to this [paper](https://cognitivemedium.com/assets/rmnist/Simard.pdf). In [Minkowski Engine paper](https://arxiv.org/pdf/1904.08755.pdf), they mentioned "Since the dataset is purely synthetic, we added various noise to the input point clouds to simulate noisy observations. We used elastic distortion, Gaussian noise, and chromatic shift in the color for the noisy 4D Synthia experiments". Our synthetic dataset may apply these too. **Train distort, Val and Test don't distort.**
 * Crop: if the number of points exceed the threshold, partial scene is cropped. **Train and Val crop, Test doesn't crop**.
 * Merge: one data sample is a scene, and the batch will merge multiple scenes together. Therefore, in each forward pass the dimension of the batch may differ. The instance label accumulates. For example, scene A and B both have instances 0-10, then scene B instance label will become 11-20. `batch_offsets` is the cumulative batch start point ID, `locs` (N, 4) is (batch_id, x,y,z) for all points.
-* Voxelize: Pointgroup divide with voxel size 0.02m, i.e. multiple the coords by 50. The coords are passed to CUDA operations, see [`pointgroup_ops.py`](../../PointGroup/lib/pointgroup_ops/functions/pointgroup_ops.py) for the API. This is a wrapper around the compiled CUDA code in PG_OP. The real CUDA code is under `lib/pointgroup_ops/src/voxelize/voxelize.cu`. To further understand the code, in `voxelize.cpp` `SparseGrids` is a Google spatial hash structure that maps a voxel coord (x,y,z) to a voxel index (linearized ID). In `voxelize_inputmap()`, points hash into voxels. The number of active voxels (M, voxels that contain at least one point) and the list of points inside each voxel are recorded. SpConv allows different modes: mode 0=guaranteed unique 1=last item(overwrite) 2=first item(keep) 3=sum, 4=mean. PointGroup uses mode 4=mean. It seems this mean doesn't mean average, it still`input_map or p2v_map` maps point ID to voxel ID (N-to-1 map), `output_map or v2p_map` maps back (1-to-N) map. 
+* Voxelize: Pointgroup divide with voxel size 0.02m, i.e. multiple the coords by 50. The coords are passed to CUDA operations, see [`pointgroup_ops.py`](../../PointGroup/lib/pointgroup_ops/functions/pointgroup_ops.py) for the API. This is a wrapper around the compiled CUDA code in PG_OP. The real CUDA code is under `lib/pointgroup_ops/src/voxelize/voxelize.cu`. To further understand the code, in `voxelize.cpp` `SparseGrids` is a Google spatial hash structure that maps a voxel coord (x,y,z) to a voxel index (linearized ID). In `voxelize_inputmap()`, points hash into voxels. The number of active voxels (M, voxels that contain at least one point) and the list of points inside each voxel are recorded. SpConv allows different modes: mode 0=guaranteed unique 1=last item(overwrite) 2=first item(keep) 3=sum, 4=mean. PointGroup uses mode 4=mean. It seems this mean doesn't mean average, it still`input_map or p2v_map` maps point ID to voxel ID (N-to-1 map), `output_map or v2p_map` maps back (1-to-N) map. **Train, Val, Test all does this.**
 
 ### Train
 
@@ -114,12 +116,22 @@ python train.py --config config/pointgroup_default_primitives3d.yaml # own datas
 tensorboard --logdir=./exp # create tensorboard session
 ```
 
+The main function is `model/pointgroup/pointgroup.py: model_fn_decorator()`. This calls the forward() in PointGroup nn.Module. The backbone conv, clustering, and scorenet can be found here:
+
+* Backbone: One question that bothers me is that data batch is multiple point clouds stacked together. Then pass through spconv. But spconv will compute local features therefore it actually computes over a mix-up point cloud. Does such features useful? Or should I always use batch_size=1? 
+* Clustering: Although for the clustering part it does distinguish between scenes (see `lib/pointgroup_ops/src/bfs_cluster/bfs_cluster.cu: ballquery_batch_p_cuda_()`). For each point (o_x,o_y,o_z), it selects all the adjacent points (less than 1000) within certain radius. These adjacent points are pre-screened to be in the same scene (see start & end variables). After selecting the points within radius, it generates instance proposals (points with the same semantic labels as the current point), see `lib/pointgroup_ops/src/bfs_cluster/bfs_cluster.cu: bfs_cluster()`. The selection - proposal step is applied to both shifted coords and original coords. The returned `idx_shift` and `idx` are serialized point ID array of ball1 points, ball 2 points, ... `start_len_shift` and `start_len` are range pointers telling `start_len[i, 0] ~ start_len[i,1]` is one ball. `proposals_idx` is (NInstancePoints, 2) where each entry is (instance ID, global point ID), e.g. if point 11 belongs to instance No. 3, the entry in `proposals_idx` is (3,11). `proposal_offsets` helps to quickly find the start pointer of certain instance, so it's a cumsum of NInstancePoints. The proposals based on original coords and shifted coords are concatenated so the first column in `proposals_idx_shift[:,0]` should be offset by the total NInstance of `proposals_idx`.
+* ScoreNet: proposals are voxelized again before scoring. Note that NMS is not applied during training. Loss are calculated based on the raw proposals instead of NMS results. NMS only applies during testing (see `test.py`)
+
 ### Test and Inference
 
 After downloading the pretrained model
 
 ```bash
-python test.py --config config/pointgroup_run1_scannet.yaml # change split: val, eval: True, this will, test_epoch to whatever epoch you want to test
+python test.py --config config/pointgroup_run1_scannet.yaml 
+# change split: val, eval: True, this will, test_epoch to whatever epoch you want to test
+# change split: test, eval: False, save_instance: True on test set
+
+python test_synthetic.py --config config/pointgroup_default_primitives3d_colorless.yaml 
 
 cd util
 python visualize.py --data_root=../dataset/scannetv2 --result_root=../exp/scannetv2/pointgroup/pointgroup_default_scannet/result/epoch384_nmst0.3_scoret0.09_npointt100 --room_name=scene0000_00 --room_split=test --task=instance_pred

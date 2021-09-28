@@ -6,9 +6,9 @@ import os
 import shutil
 
 root_path = 'H:\RockScan'
-rock_category = 'RR3'
+rock_category = 'RR4'
 start_folder_ID = 1
-end_folder_ID = 40
+end_folder_ID = 36
 dest_folder = 'H:\RockScan\LODs'
 
 mesh_path = os.path.join(dest_folder, 'Mesh')

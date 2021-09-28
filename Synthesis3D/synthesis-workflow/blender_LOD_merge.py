@@ -6,9 +6,9 @@ import os
 import bpy
 
 root_path = 'H:\RockScan'
-rock_category = 'RR3'
+rock_category = 'RR4'
 start_folder_ID = 1
-end_folder_ID = 40
+end_folder_ID = 36
 LODs = 3
 
 C = bpy.context

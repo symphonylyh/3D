@@ -11,20 +11,21 @@ import pymeshlab as ml
 # print(out_dict['surface_area'])
 
 root_path = 'H:\RockScan'
-rock_category = 'RR3'
+rock_category = 'Ballast'
 start_folder_ID = 1
-end_folder_ID = 40
+end_folder_ID = 1 # included
+ext = '.obj' # .fbx for RR3/RR4 Metashape scan, .ply for CBM2018 VisualSfM scan, .ply for Ballast textured laser scan
 target_face_count = {0: 2000, 1: 1000, 2: 500} # at different LOD levels (LOD0 more faces --> LOD2 less faces) 
 
 for folderID in range(start_folder_ID, end_folder_ID + 1): # folder name '1', '2', ... '40'
     model_path = os.path.join(root_path, rock_category, str(folderID), 'models')
-    model_name = os.path.join(model_path, rock_category+'_'+str(folderID)+'.fbx')
+    model_name = os.path.join(model_path, rock_category+'_'+str(folderID)+ext)
 
     # meshset contains a set of meshes. Each mesh is a layer and has a unique ID.
     ms = ml.MeshSet()
     ms.load_new_mesh(model_name) # load new mesh and set as current mesh
     measures = ms.compute_geometric_measures()
-    print("[PRINT] %s: %d vertices, %d faces, area %.1f cm^2, volume %.1f cm^3" % (rock_category+'_'+str(folderID)+'.fbx', ms.current_mesh().vertex_number(), ms.current_mesh().face_number(), measures['surface_area']*1e4, measures['mesh_volume']*1e6) )
+    print("[PRINT] %s: %d vertices, %d faces, area %.1f cm^2, volume %.1f cm^3" % (rock_category+'_'+str(folderID)+ext, ms.current_mesh().vertex_number(), ms.current_mesh().face_number(), measures['surface_area']*1e4, measures['mesh_volume']*1e6) )
 
     # Mesh Re-centering
     ms.transform_translate_center_set_origin(traslmethod='Center on Layer BBox', freeze=True)
