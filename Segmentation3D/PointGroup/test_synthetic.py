@@ -62,6 +62,7 @@ def test(model, model_fn, epoch):
         for i, batch in enumerate(dataloader):
             N = batch['feats'].shape[0]
             test_scene_name = dataset.test_file_names[int(batch['id'][0])].split('/')[-1][:-4]
+            print("XXX", test_scene_name)
 
             start1 = time.time()
             preds = model_fn(batch, model, epoch)
@@ -71,7 +72,7 @@ def test(model, model_fn, epoch):
             semantic_scores = preds['semantic']  # (N, nClass=3) float32, cuda
             semantic_pred = semantic_scores.max(1)[1]  # (N) long, cuda
 
-            print(semantic_pred.shape[0], torch.sum(semantic_pred==0).item(), torch.sum(semantic_pred==1).item(), torch.sum(semantic_pred==2).item())
+            # print(semantic_pred.shape[0], torch.sum(semantic_pred==0).item(), torch.sum(semantic_pred==1).item(), torch.sum(semantic_pred==2).item())
             
             pt_offsets = preds['pt_offsets']    # (N, 3), float32, cuda
 
@@ -102,12 +103,12 @@ def test(model, model_fn, epoch):
                 #     assert proposals_idx[point_idx,0] == proposal_id
                 #     assert semantic_pred[proposals_idx[point_idx,1]] == proposal_sem
 
-                print(proposals_idx[start_idx])
+                # print(proposals_idx[start_idx])
 
-            print(semantic_pred[0], semantic_pred[4221])
-            print(proposals_idx[:10,:])
-            print(proposals_idx[:, 1][proposals_offset[:-1].long()].long())
-            print(proposals_idx.shape)
+            # print(semantic_pred[0], semantic_pred[4221])
+            # print(proposals_idx[:10,:])
+            # print(proposals_idx[:, 1][proposals_offset[:-1].long()].long())
+            # print(proposals_idx.shape)
 
             ##### score threshold (only proposals with high score are preserved)
             score_mask = (scores_pred > cfg.TEST_SCORE_THRESH)

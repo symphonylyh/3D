@@ -21,8 +21,11 @@ from plot3d import Plot3DApp, Plot3DFigure, PointCloudVis as pcvis
 
 ###  Read point cloud file
 dataset_path = '/home/luojiayi/Documents/haohang/3D/Segmentation3D/PointGroup/dataset/primitives3d/ply/'
+dataset_path = '/home/luojiayi/Documents/haohang/3D/Segmentation3D/PointGroup/dataset/rocks3d-rr3/ply/'
 file_id = 0
-sem_dict = ['cube', 'sphere', 'cylinder'] # or sem_dict = {0:'cube', 1:'sphere', 2:'cylinder'}
+sem_dict = ['cube', 'sphere', 'cylinder']
+# or sem_dict = {0:'cube', 1:'sphere', 2:'cylinder'} 
+sem_dict = ['rock']
 
 files = sorted(glob.glob(dataset_path + '*.ply'))
 print(f"Dataset has {len(files)} stockpiles, plotting stockpile {file_id}")

@@ -31,6 +31,10 @@ class Dataset:
         self.mode = cfg.mode
 
         if test:
+            if cfg.test_dataset:
+                self.dataset = cfg.test_dataset
+            # [HHH] allow to test on other datsets
+        
             self.test_split = cfg.split  # val or test
             self.test_workers = cfg.test_workers
             cfg.batch_size = 1
