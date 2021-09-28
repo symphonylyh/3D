@@ -8,6 +8,8 @@ This script plots 3 figures:
     - Fig 2: Colored by semantic & Colored by instance
     - Fig 3: Colored by instance with bbox
 By switching the draw_all flag, you can choose to draw the entire scene or just certain blocks
+Note:
+    - somehow on Ubuntu the bbox cannot be plotted in Open3D
 '''
 
 import os, sys
