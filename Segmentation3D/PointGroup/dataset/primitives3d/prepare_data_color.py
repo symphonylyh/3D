@@ -3,8 +3,12 @@ Convert from ply to pth for pytorch dataloader.
 
 Usage:
     - place this file in the dataset folder, at the same level with /train, /val, /test splits
-    - python prepare_data.py --data_split train # or val, test
+    - python prepare_data_color.py --data_split train # or val, test
     - val is the validation set having ground-truth semins labels, test is the data in production that has no ground-truth labels (only xyzrgb)
+
+Notes:
+    - different from pointgroup's prepare_data.py, our data is double, we need to convert to float since pointgroup cuda operation requires torch float tensor, so we need cast to np.float32 during data pre-processing.
+    - color/colorless data are treated differently, this file is for color data pre-processing.
 '''
 
 import glob, plyfile, numpy as np, multiprocessing as mp, torch, argparse
@@ -24,7 +28,7 @@ def f_trainval(fn):
     print(fn)
 
     f = plyfile.PlyData().read(fn)
-    points = np.array([list(x) for x in f.elements[0]]).astype(np.float32)
+    points = np.array([list(x) for x in f.elements[0]]).astype(np.float32) # pointgroup uses float tensor, so cast to float
     coords = np.ascontiguousarray(points[:, :3] - points[:, :3].mean(axis=0))
     colors = np.ascontiguousarray(points[:, 3:6]) / 127.5 - 1
 

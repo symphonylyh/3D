@@ -77,9 +77,6 @@ dataset/primitives3d/*
 !dataset/primitives3d_colorless/
 dataset/primitives3d_colorless/*
 !dataset/primitives3d_colorless/*.py
-!dataset/synthetic3d/
-dataset/synthetic3d/*
-!dataset/synthetic3d/*.py
 
 
 
