@@ -277,7 +277,7 @@ class PointCloudVis:
     @staticmethod
     def random_colors(N, bright=True, seed=0):
         brightness = 1.0 if bright else 0.7
-        hsv = [( 0.15+ i/float(N), 1, brightness) for i in range(N)]
+        hsv = [(i/float(N), 1, np.random.uniform(0.7,1.0)) for i in range(N)]
         colors = list(map(lambda c: colorsys.hsv_to_rgb(*c), hsv))
         random.seed(seed)
         random.shuffle(colors)
@@ -348,8 +348,8 @@ class PointCloudVis:
     def draw_pc_by_semins(subfigure_handle, pc_xyzrgbsemins, color_code='instance',sem_dict=None, show_legend=False, show_bbox=True, bbox_axis_align=True, bbox_color='black', show_instance_label=False):
         '''
         [Block data] draw points colored by semantic/instance label
-            - 'semantic' mode: each semantic class displayed in a different color, option to show legend aside
-            - 'instance' mode: each instance displayed in a different color, options to display bbox (axis aligned/oriented), to show bbox boundary in black/color, to show instance label "ID: class".
+            - 'semantic' mode: each semantic class displayed in a different color, option to show legend aside. -1 means not a class, colored as black
+            - 'instance' mode: each instance displayed in a different color, options to display bbox (axis aligned/oriented), to show bbox boundary in black/color, to show instance label "ID: class". -1 menas not an instance, colored as black
 
             subfigure_handle: Plot3DSubfigure() object
             pc_xyzrgbsemins: (x_global,y_global,z_global,r,g,b,sem,ins), [B,N,8] ndarray, B - num of blocks, N - num of points in a block
@@ -367,6 +367,7 @@ class PointCloudVis:
         plot_handle = subfigure_handle.handle
         sem_labels, ins_labels = pc_xyzrgbsemins[:,:,-2].flatten(), pc_xyzrgbsemins[:,:,-1].flatten()
         sem_keys, ins_keys = np.unique(sem_labels), np.unique(ins_labels)
+        sem_keys, ins_keys = sem_keys[sem_keys > -1], ins_keys[ins_keys > -1] # remove non-class/non-instance labels
         sem_colors = PointCloudVis.random_colors(len(sem_keys)) 
         ins_colors = PointCloudVis.random_colors(len(ins_keys))
         print('ins_keys', len(ins_keys))
@@ -379,8 +380,11 @@ class PointCloudVis:
         pc_xyzrgb = pc_xyzrgbsemins[:,:,:6].reshape(-1,6) # flatten
         pc.points = o3d.utility.Vector3dVector(pc_xyzrgb[:, :3]) # from numpy to o3d format
         
+        non_plot_color = (0.7,0.7,0.7) # for non-class/non-instance points
         if color_code == 'semantic':
-            # assign per-class color
+            # first assign black to no-class points
+            pc_xyzrgb[np.argwhere(sem_labels == -1)[:, 0],3:] = non_plot_color
+            # assign per-class color            
             for id, sem in enumerate(sem_keys):
                 sem_ind = np.argwhere(sem_labels == sem)[:, 0]
                 pc_xyzrgb[sem_ind,3:] = sem_colors[id]
@@ -402,6 +406,8 @@ class PointCloudVis:
                 figure_handle.viewport_legends[subfigure_handle.row][subfigure_handle.col] = vgrid
 
         elif color_code == 'instance':
+            # first assign black to no-instance points
+            pc_xyzrgb[np.argwhere(ins_labels == -1)[:, 0],3:] = non_plot_color
             # assign per-instance color
             for id, ins in enumerate(ins_keys):
                 ins_ind = np.argwhere(ins_labels == ins)[:, 0]
@@ -423,6 +429,8 @@ class PointCloudVis:
                         bbox_wireframe.paint_uniform_color(ins_colors[id])
                     
                     # plot_handle.scene.add_geometry(f"Instance BBox {id}", bbox_wireframe, PointCloudVis.get_default_material_lineset())
+                    # after 0.13.0, we can directly draw bbox instead of converting to lineset
+                    plot_handle.scene.add_geometry(f"Instance BBox {id}", bbox, PointCloudVis.get_default_material_lineset())
 
                     if show_instance_label:
                         

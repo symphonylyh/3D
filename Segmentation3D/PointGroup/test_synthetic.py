@@ -142,14 +142,14 @@ def test(model, model_fn, epoch):
             ##### write to PLY file
             coords_np = batch['locs_float'].numpy() # 0～2
             colors_np = batch['feats'].numpy() # 3～5, [-1,1]
-            sem_labels_np = semantic_pred.cpu().numpy()[:,np.newaxis] # 6
+            sem_labels_np = semantic_pred.cpu().numpy()[:,np.newaxis] # 6, per-point sem label, 0~Nclass-1, -1 means no class
             instances = clusters.cpu().numpy()
             instances_scores = cluster_scores.cpu().numpy()
-            ins_labels_np = np.zeros((N, 1)) # per-point ins label, 1~N. 0 means not an instance
-            ins_scores_np = np.zeros((N, 1)) # confidence of instance score (per-instance, but assigned as per-point, same for all points of the same instance. 0 means not an instance
+            ins_labels_np = - np.ones((N, 1)) # per-point ins label, 0~Ninstance-1, -1 means not an instance
+            ins_scores_np = - np.ones((N, 1)) # confidence of instance score (per-instance, but assigned as per-point, same for all points of the same instance. -1 means not an instance
             for ins in range(instances.shape[0]):
                 print(f'instance {ins}: {np.nonzero(instances[ins])[0].shape[0]} points')
-                ins_labels_np[np.nonzero(instances[ins])] = ins + 1 # 7
+                ins_labels_np[np.nonzero(instances[ins])] = ins # 7
                 ins_scores_np[np.nonzero(instances[ins])] = instances_scores[ins] # 8
             offsets_np = pt_offsets.cpu().numpy() # 9:11
             results = np.concatenate([coords_np, colors_np, sem_labels_np, ins_labels_np, ins_scores_np, offsets_np], axis=1)
@@ -160,6 +160,7 @@ def test(model, model_fn, epoch):
             app = Plot3DApp()
 
             fig1 = app.create_figure(figure_name='Fig 1', viewports_dim=(1,3), width=1920, height=720, sync_camera=True, plot_boundary=True, show_axes=True, show_subtitles=True, background_color=(1,1,1,1), snapshot_path='./')
+            fig2 = app.create_figure(figure_name='Fig 2', viewports_dim=(1,1), width=1280, height=720, sync_camera=True, plot_boundary=False, show_axes=True, show_subtitles=True, background_color=(1,1,1,1), snapshot_path='./')
             
             fig1a = fig1.set_subplot(0,0,'Raw Point Cloud')
             pcvis.draw_pc_raw(fig1a, pc_xyzrgb)
@@ -168,7 +169,11 @@ def test(model, model_fn, epoch):
             fig1c = fig1.set_subplot(0,2,'Point Cloud by Instance')
             pcvis.draw_pc_by_semins(fig1c, pc_xyzrgbsemins, sem_dict=None, color_code='instance', show_bbox=True)
 
+            fig2a = fig2.set_subplot(0,0,'Point Cloud by Instance Label')
+            pcvis.draw_pc_by_semins(fig2a, pc_xyzrgbsemins, sem_dict=None, color_code='instance', show_bbox=True, bbox_axis_align=True, bbox_color='black', show_instance_label=True)
+
             fig1.ready()
+            fig2.ready()
             app.plot()
             app.close()
 

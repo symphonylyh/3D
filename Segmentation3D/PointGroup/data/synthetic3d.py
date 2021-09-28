@@ -334,7 +334,8 @@ class Dataset:
                 exit(0)
 
             ### flip x / rotation
-            xyz_middle = self.dataAugment(xyz_origin, False, True, True)
+            # xyz_middle = self.dataAugment(xyz_origin, False, True, True)
+            xyz_middle = self.dataAugment(xyz_origin, False, False, False)
 
             ### scale
             xyz = xyz_middle * self.scale
