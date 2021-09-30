@@ -28,7 +28,7 @@ STRUCTURE:
   use_coords: True
 
 TRAIN:
-  epochs: 100 #384
+  epochs: 20 #384
   train_workers: 16 # data loader workers
   optim: Adam # Adam or SGD
   lr: 0.001
@@ -52,7 +52,7 @@ TRAIN:
 
 GROUP:
   ### point grouping
-  cluster_radius: 0.01
+  cluster_radius: 0.008
   cluster_meanActive: 50
   cluster_shift_meanActive: 300
   cluster_npoint_thre: 50
