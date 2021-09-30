@@ -303,6 +303,10 @@ class PointGroup(nn.Module):
             # proposals_idx: (sumNPoint, 2), int, dim 0 for cluster_id, dim 1 for corresponding point idxs in N
             # proposals_offset: (nProposal + 1), int
 
+            # DEBUG print
+            print(f"Original Coords Proposals: {proposals_offset.size(0)-1}\n Shifted Coords Proposals: {proposals_offset_shift.size(0)-1}")
+
+            # concat original coords proposals & shifted coords proposals
             proposals_idx_shift[:, 0] += (proposals_offset.size(0) - 1)
             proposals_offset_shift += proposals_offset[-1]
             proposals_idx = torch.cat((proposals_idx, proposals_idx_shift), dim=0)

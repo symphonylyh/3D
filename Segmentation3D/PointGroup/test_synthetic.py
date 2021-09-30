@@ -90,8 +90,7 @@ def test(model, model_fn, epoch):
             semantic_id = semantic_pred[proposals_idx[:, 1][proposals_offset[:-1].long()].long()] # (nProposal), long
 
             num_proposals = proposals_offset.shape[0]-1
-            print(f'{num_proposals} proposals')
-            print(proposals_offset)
+            print(f'Total Proposals: {num_proposals}')
             for prop_i in range(num_proposals):
                 start_idx, end_idx = proposals_offset[prop_i], proposals_offset[prop_i + 1] # [start, end)
                 
@@ -140,7 +139,7 @@ def test(model, model_fn, epoch):
 
             nclusters = clusters.shape[0]
             
-            ##### write to PLY file
+            ##### visualize & write to PLY file
             coords_np = batch['locs_float'].numpy() # 0～2
             colors_np = batch['feats'].numpy() # 3～5, [-1,1]
             sem_labels_np = semantic_pred.cpu().numpy()[:,np.newaxis] # 6, per-point sem label, 0~Nclass-1, -1 means no class
@@ -154,10 +153,12 @@ def test(model, model_fn, epoch):
                 ins_scores_np[np.nonzero(instances[ins])] = instances_scores[ins] # 8
             offsets_np = pt_offsets.cpu().numpy() # 9:11
             results = np.concatenate([coords_np, colors_np, sem_labels_np, ins_labels_np, ins_scores_np, offsets_np], axis=1)
-            
+            results_shift = np.concatenate([coords_np+offsets_np, colors_np, sem_labels_np, ins_labels_np, ins_scores_np, offsets_np], axis=1)
 
             pc_xyzrgb = results[:,:6][np.newaxis,:,:]
             pc_xyzrgbsemins = results[:,:8][np.newaxis,:,:]
+            pc_xyzrgbsemins_shift = results_shift[:,:8][np.newaxis,:,:]
+
             app = Plot3DApp()
 
             fig1 = app.create_figure(figure_name='Fig 1', viewports_dim=(1,3), width=1920, height=720, sync_camera=True, plot_boundary=True, show_axes=True, show_subtitles=True, background_color=(1,1,1,1), snapshot_path='./')
@@ -165,8 +166,10 @@ def test(model, model_fn, epoch):
             
             fig1a = fig1.set_subplot(0,0,'Raw Point Cloud')
             pcvis.draw_pc_raw(fig1a, pc_xyzrgb)
-            fig1b = fig1.set_subplot(0,1,'Point Cloud by Semantic')
-            pcvis.draw_pc_by_semins(fig1b, pc_xyzrgbsemins, sem_dict=None, color_code='semantic', show_legend=True)
+            # fig1b = fig1.set_subplot(0,1,'Point Cloud by Semantic')
+            # pcvis.draw_pc_by_semins(fig1b, pc_xyzrgbsemins, sem_dict=None, color_code='semantic', show_legend=True)
+            fig1b = fig1.set_subplot(0,1,'Point Cloud by Instance (shifted coordinates)')
+            pcvis.draw_pc_by_semins(fig1b, pc_xyzrgbsemins_shift, sem_dict=None, color_code='instance', show_bbox=False)
             fig1c = fig1.set_subplot(0,2,'Point Cloud by Instance')
             pcvis.draw_pc_by_semins(fig1c, pc_xyzrgbsemins, sem_dict=None, color_code='instance', show_bbox=True)
 
