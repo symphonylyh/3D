@@ -86,12 +86,12 @@ python prepare_data_inst.py --data_split train # val, test as well, into .pth fi
 python prepare_data_inst_gttxt.py # by default work on val set
 ```
 
-Finally we can process our own dataset. Since we already generate all labels in a ply file, it's easier in our case to generate such pth file. See [prepare_data.py](../../PointGroup/dataset/primitives3d/prepare_data.py). Note that our data is double, we need to convert to float since pointgroup cuda operation requires torch float tensor, so we need cast to np.float32 during data pre-processing.
+Finally we can process our own dataset. Since we already generate all labels in a ply file, it's easier in our case to generate such pth file. See [prepare_data_color.py](../../PointGroup/dataset/primitives3d/prepare_data_color.py) and [prepare_data_colorless.py](../../PointGroup/dataset/primitives3d_colorless/prepare_data_colorless.py) depending on whether the data is color or colorless. Note that our data is double, we need to convert to float since pointgroup cuda operation requires torch float tensor, so we need cast to np.float32 during data pre-processing.
 
 ```bash
 cd dataset/primitives3d
 
-python prepare_data.py --data_split train # val, test as well, into .pth files
+python prepare_data_color.py --data_split train # val, test as well, into .pth files
 ```
 
 ### Dataloader
@@ -136,4 +136,8 @@ python test_synthetic.py --config config/pointgroup_default_primitives3d_colorle
 cd util
 python visualize.py --data_root=../dataset/scannetv2 --result_root=../exp/scannetv2/pointgroup/pointgroup_default_scannet/result/epoch384_nmst0.3_scoret0.09_npointt100 --room_name=scene0000_00 --room_split=test --task=instance_pred
 ```
+
+### Notes
+
+* this [push history](https://github.com/symphonylyh/3D/commit/b22dbd47f4a17e25f44c736ce74ffd9a5e5154fd#diff-50ee2a3bad7b3c5ee26e47b47885e1b680610e1afe7c6b7ac3432f32bd43fff2) records a change in pointgroup.py that originally ignores all semantic predictions <=1, but we have semantic starting from 0, so 0 and 1 are both object categories.
 

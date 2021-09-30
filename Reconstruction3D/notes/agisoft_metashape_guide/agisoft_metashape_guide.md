@@ -189,5 +189,5 @@ Sequence: check order 1 -- manual cleaning on sparse cloud -- check orders 2 to 
 
 * Step 5: build dense cloud (for deep learning), and mesh (for graph approach) **(batch order 7 & 8)**. Then we can do manual cleaning on the cloud and mesh to remove a small portion of ground.
 * Step 6: label markers and specify scale bars (described previously in all-around scan section) 
-* Step 7: export cloud and mesh models ([script](../../metashape_workflow/metashape_batch_export_stockpile.py)).
+* Step 7: export cloud and mesh models ([script](../../metashape_workflow/metashape_batch_export_stockpile.py)). Since there is not many stockpile data, I just manually export them.
 
