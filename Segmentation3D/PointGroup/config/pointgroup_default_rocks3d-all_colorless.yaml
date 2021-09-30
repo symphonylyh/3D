@@ -52,14 +52,15 @@ TRAIN:
 
 GROUP:
   ### point grouping
-  cluster_radius: 0.03
+  cluster_radius: 0.0025
   cluster_meanActive: 50
   cluster_shift_meanActive: 300
-  cluster_npoint_thre: 50
+  cluster_npoint_thre: 2000 #50
 
   prepare_epochs: 10 #128
 
 TEST:
+  test_dataset: stockpile_testset
   split: test
   test_epoch: 99
   test_workers: 16
