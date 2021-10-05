@@ -1,7 +1,7 @@
 
 import torch
 import torch.optim as optim
-import time, sys, os, random
+import time, sys, os, random, re, importlib
 from tensorboardX import SummaryWriter
 import numpy as np
 import glob
@@ -84,9 +84,8 @@ def train(train_loader, model, model_fn, optimizer, start_iter, scheduler, save_
         if save_to_disc:
             if iteration > cfg.prepare_epochs:
                 sys.stdout.write(
-                    "iter: {}/{} lr: {:.6f} loss: {:.4f}({:.4f}) score_loss: {:.4f}({:.4f}) data_time: {:.2f}({:.2f}) iter_time: {:.2f}({:.2f}) remain_time: {remain_time}\n".format
-                    (iteration + 1, len(train_loader), scheduler.get_lr()[0], am_dict['loss'].val, am_dict['loss'].avg, am_dict['score_loss'].val, am_dict['score_loss'].avg,
-                     data_time.val, data_time.avg, iter_time.val, iter_time.avg, remain_time=remain_time))
+                    "iter: {}/{} lr: {:.6f} loss: {:.4f}({:.4f}) score_loss: {:.4f}({:.4f}) dice_loss: {:.4f}({:.4f}) data_time: {:.2f}({:.2f}) iter_time: {:.2f}({:.2f}) remain_time: {remain_time}\n".format
+                    (iteration + 1, len(train_loader), scheduler.get_lr()[0], am_dict['loss'].val, am_dict['loss'].avg, am_dict['score_loss'].val, am_dict['score_loss'].avg, am_dict['dice_loss'].val, am_dict['dice_loss'].avg, data_time.val, data_time.avg, iter_time.val, iter_time.avg, remain_time=remain_time))
             else:
                 sys.stdout.write(
                     "iter: {}/{} lr: {:.6f} loss: {:.4f}({:.4f}) data_time: {:.2f}({:.2f}) iter_time: {:.2f}({:.2f}) remain_time: {remain_time}\n".format
@@ -98,7 +97,7 @@ def train(train_loader, model, model_fn, optimizer, start_iter, scheduler, save_
             # if epoch % cfg.save_freq == 0:
                 # utils.checkpoint_save(model, cfg.output_path, cfg.config.split('/')[-1][:-5], epoch, cfg.save_freq, use_cuda)
             if (iteration % cfg.save_freq == 0 or iteration==cfg.max_iter-1) and save_to_disc:
-                checkpoint(model, optimizer, iteration, cfg.output_path, None, None)
+                checkpoint(model, optimizer, iteration, cfg.exp_path, None, None)
 
             for k in am_dict.keys():
                 if k in visual_dict.keys():
@@ -159,8 +158,8 @@ if __name__ == '__main__':
     logger.info('=> creating model ...')
 
     #if model_name == 'pointgroup':
-    from model.pointgroup.pointgroup import PointGroup as Network
-    from model.pointgroup.pointgroup import model_fn_decorator
+    from model.pointgroup.pointgroup_dyco3d import PointGroup as Network
+    from model.pointgroup.pointgroup_dyco3d import model_fn_decorator
     #else:
     #    print("Error: no model - " + model_name)
     #    exit(0)
@@ -172,9 +171,9 @@ if __name__ == '__main__':
     assert use_cuda
     model = model.cuda()
 
-    if cfg.use_syncbn:
-        print('use sync BN')
-        model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
+    # if cfg.use_syncbn:
+    #     print('use sync BN')
+    #     model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
 
     # logger.info(model)
     logger.info('#classifier parameters: {}'.format(sum([x.nelement() for x in model.parameters()])))
@@ -236,15 +235,24 @@ if __name__ == '__main__':
 
 
     ##### dataset
-    if cfg.dataset == 'scannetv2':
-        if data_name == 'scannet':
-            import data.scannetv2_inst
-            dataset = data.scannetv2_inst.Dataset(start_iter=start_iter)
-            dataset.trainLoader()
-            # dataset.valLoader()
-        else:
-            print("Error: no data loader - " + data_name)
-            exit(0)
+    # if cfg.dataset == 'scannetv2':
+    #     if data_name == 'scannet':
+    #         import data.scannetv2_inst
+    #         dataset = data.scannetv2_inst.Dataset(start_iter=start_iter)
+    #         dataset.trainLoader()
+    #         # dataset.valLoader()
+    #     else:
+    #         print("Error: no data loader - " + data_name)
+    #         exit(0)
+    if os.path.isfile(cfg.dataset_dir):
+        module_name = ".".join(re.split("[/.]", cfg.dataset_dir)[:-1])
+        dataset_module = importlib.import_module(module_name)
+        dataset = dataset_module.Dataset(start_iter=start_iter)
+        dataset.trainLoader()
+        # dataset.valLoader()
+    else:
+        print("Error: no data loader - " + module_name)
+        exit(0)
 
 
     if start_iter < 0:

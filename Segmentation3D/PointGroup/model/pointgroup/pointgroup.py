@@ -283,7 +283,7 @@ class PointGroup(nn.Module):
             #object_idxs = torch.nonzero(semantic_preds > 1).view(-1)
             # culprit! this ignore all semantic labels <= 1, which should not apply in our case
             object_idxs = torch.nonzero(semantic_preds > -1).view(-1)
-
+            
             batch_idxs_ = batch_idxs[object_idxs]
             batch_offsets_ = utils.get_batch_offsets(batch_idxs_, input.batch_size)
             coords_ = coords[object_idxs]

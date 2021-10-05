@@ -2,7 +2,9 @@ import torch
 import time
 import numpy as np
 import random
-import os
+import os, re, importlib
+import plyfile
+from vis.plot3d import Plot3DApp, Plot3DFigure, PointCloudVis as pcvis
 
 from util.config import cfg
 cfg.task = 'test'
@@ -43,14 +45,23 @@ def init():
 def test(model, model_fn, data_name, epoch):
     logger.info('>>>>>>>>>>>>>>>> Start Evaluation >>>>>>>>>>>>>>>>')
 
-    if cfg.dataset == 'scannetv2':
-        if data_name == 'scannet':
-            from data.scannetv2_inst import Dataset
-            dataset = Dataset(test=True)
-            dataset.testLoader()
-        else:
-            print("Error: no data loader - " + data_name)
-            exit(0)
+    # if cfg.dataset == 'scannetv2':
+    #     if data_name == 'scannet':
+    #         from data.scannetv2_inst import Dataset
+    #         dataset = Dataset(test=True)
+    #         dataset.testLoader()
+    #     else:
+    #         print("Error: no data loader - " + data_name)
+    #         exit(0)
+    if os.path.isfile(cfg.dataset_dir):
+        module_name = ".".join(re.split("[/.]", cfg.dataset_dir)[:-1])
+        dataset_module = importlib.import_module(module_name)
+        dataset = dataset_module.Dataset(test=True)
+        dataset.testLoader()
+    else:
+        print("Error: no data loader - " + data_name)
+        exit(0)
+
     dataloader = dataset.test_data_loader
 
     with torch.no_grad():
@@ -58,8 +69,8 @@ def test(model, model_fn, data_name, epoch):
         matches = {}
         for i, batch in enumerate(dataloader):
             N = batch['feats'].shape[0]
-            test_scene_name = dataset.test_file_names[int(batch['id'][0])].split('/')[-1][:12]
-
+            test_scene_name = dataset.test_file_names[int(batch['id'][0])].split('/')[-1][:-4]
+            print("XXX", test_scene_name)
 
             preds = model_fn(batch, model, epoch)
 
@@ -81,6 +92,9 @@ def test(model, model_fn, data_name, epoch):
                 proposals_pred[proposals_idx[:, 0].long(), proposals_idx[:, 1].long()] = 1
 
                 semantic_id = torch.tensor(semantic_label_idx, device=scores_pred.device)[semantic_pred[proposals_idx[:, 1][proposals_offset[:-1].long()].long()]] # (nProposal), long
+
+                num_proposals = proposals_offset.shape[0]-1
+                print(f'Total Raw Proposals: {num_proposals}')
 
                 ##### score threshold
                 score_mask = (scores_pred > cfg.TEST_SCORE_THRESH)
@@ -111,6 +125,52 @@ def test(model, model_fn, data_name, epoch):
                 cluster_semantic_id = semantic_id[pick_idxs]
 
                 nclusters = clusters.shape[0]
+
+                print(f'Total Final Proposals: {nclusters}')
+
+                ##### visualize & write to PLY file
+                coords_np = batch['locs_float'].numpy() # 0～2
+                colors_np = batch['feats'].numpy() # 3～5, [-1,1]
+                sem_labels_np = semantic_pred.cpu().numpy()[:,np.newaxis] # 6, per-point sem label, 0~Nclass-1, -1 means no class
+                instances = clusters.cpu().numpy()
+                instances_scores = cluster_scores.cpu().numpy()
+                ins_labels_np = - np.ones((N, 1)) # per-point ins label, 0~Ninstance-1, -1 means not an instance
+                ins_scores_np = - np.ones((N, 1)) # confidence of instance score (per-instance, but assigned as per-point, same for all points of the same instance. -1 means not an instance
+                for ins in range(instances.shape[0]):
+                    print(f'instance {ins}: {np.nonzero(instances[ins])[0].shape[0]} points')
+                    ins_labels_np[np.nonzero(instances[ins])] = ins # 7
+                    ins_scores_np[np.nonzero(instances[ins])] = instances_scores[ins] # 8
+                offsets_np = pt_offsets.cpu().numpy() # 9:11
+                results = np.concatenate([coords_np, colors_np, sem_labels_np, ins_labels_np, ins_scores_np, offsets_np], axis=1)
+                results_shift = np.concatenate([coords_np+offsets_np, colors_np, sem_labels_np, ins_labels_np, ins_scores_np, offsets_np], axis=1)
+
+                pc_xyzrgb = results[:,:6][np.newaxis,:,:]
+                pc_xyzrgbsemins = results[:,:8][np.newaxis,:,:]
+                pc_xyzrgbsemins_shift = results_shift[:,:8][np.newaxis,:,:]
+
+                app = Plot3DApp()
+
+                fig1 = app.create_figure(figure_name='Fig 1', viewports_dim=(1,3), width=1920, height=720, sync_camera=True, plot_boundary=True, show_axes=True, show_subtitles=True, background_color=(1,1,1,1), snapshot_path='./')
+                fig2 = app.create_figure(figure_name='Fig 2', viewports_dim=(1,1), width=1280, height=720, sync_camera=True, plot_boundary=False, show_axes=True, show_subtitles=True, background_color=(1,1,1,1), snapshot_path='./')
+                
+                fig1a = fig1.set_subplot(0,0,'Raw Point Cloud')
+                pcvis.draw_pc_raw(fig1a, pc_xyzrgb)
+                # fig1b = fig1.set_subplot(0,1,'Point Cloud by Semantic')
+                # pcvis.draw_pc_by_semins(fig1b, pc_xyzrgbsemins, sem_dict=None, color_code='semantic', show_legend=True)
+                fig1b = fig1.set_subplot(0,1,'Point Cloud by Instance (shifted coordinates)')
+                pcvis.draw_pc_by_semins(fig1b, pc_xyzrgbsemins_shift, sem_dict=None, color_code='instance', show_bbox=False)
+                fig1c = fig1.set_subplot(0,2,'Point Cloud by Instance')
+                pcvis.draw_pc_by_semins(fig1c, pc_xyzrgbsemins, sem_dict=None, color_code='instance', show_bbox=True)
+
+                fig2a = fig2.set_subplot(0,0,'Point Cloud by Instance Label')
+                pcvis.draw_pc_by_semins(fig2a, pc_xyzrgbsemins, sem_dict=None, color_code='instance', show_bbox=True, bbox_axis_align=True, bbox_color='black', show_instance_label=True)
+
+                fig1.ready()
+                fig2.ready()
+                app.plot()
+                app.close()
+
+                return
 
                 ##### prepare for evaluation
                 if cfg.eval:
@@ -206,8 +266,8 @@ if __name__ == '__main__':
     logger.info('Classes: {}'.format(cfg.classes))
 
     #if model_name == 'pointgroup':
-    from model.pointgroup.pointgroup import PointGroup as Network
-    from model.pointgroup.pointgroup import model_fn_decorator
+    from model.pointgroup.pointgroup_dyco3d import PointGroup as Network
+    from model.pointgroup.pointgroup_dyco3d import model_fn_decorator
     #else:
     #    print("Error: no model version " + model_name)
     #    exit(0)

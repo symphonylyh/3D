@@ -8,7 +8,7 @@ import time
 import numpy as np
 import random
 import os, re, importlib
-import plyfile
+from plyfile import PlyData, PlyElement
 from vis.plot3d import Plot3DApp, Plot3DFigure, PointCloudVis as pcvis
 
 from util.config import cfg
@@ -90,7 +90,8 @@ def test(model, model_fn, epoch):
             semantic_id = semantic_pred[proposals_idx[:, 1][proposals_offset[:-1].long()].long()] # (nProposal), long
 
             num_proposals = proposals_offset.shape[0]-1
-            print(f'Total Proposals: {num_proposals}')
+            print(f'Total Raw Proposals: {num_proposals}')
+
             for prop_i in range(num_proposals):
                 start_idx, end_idx = proposals_offset[prop_i], proposals_offset[prop_i + 1] # [start, end)
                 
@@ -139,9 +140,13 @@ def test(model, model_fn, epoch):
 
             nclusters = clusters.shape[0]
             
+            print(f'Total Final Proposals: {nclusters}')
+
             ##### visualize & write to PLY file
             coords_np = batch['locs_float'].numpy() # 0～2
             colors_np = batch['feats'].numpy() # 3～5, [-1,1]
+            colors_np = (colors_np + 1) * 127.5 # converted back to 0-255 scale
+
             sem_labels_np = semantic_pred.cpu().numpy()[:,np.newaxis] # 6, per-point sem label, 0~Nclass-1, -1 means no class
             instances = clusters.cpu().numpy()
             instances_scores = cluster_scores.cpu().numpy()
@@ -154,6 +159,13 @@ def test(model, model_fn, epoch):
             offsets_np = pt_offsets.cpu().numpy() # 9:11
             results = np.concatenate([coords_np, colors_np, sem_labels_np, ins_labels_np, ins_scores_np, offsets_np], axis=1)
             results_shift = np.concatenate([coords_np+offsets_np, colors_np, sem_labels_np, ins_labels_np, ins_scores_np, offsets_np], axis=1)
+
+            # write segmentation results to PLY
+            # ply_list = [tuple(results[i]) for i in range(results.shape[0])]
+            # ply = np.array(ply_list,
+            #              dtype=[('x', 'f4'), ('y', 'f4'), ('z', 'f4'),('r', 'u1'), ('g', 'u1'), ('b', 'u1'),('sem', 'i4'), ('ins', 'i4'), ('score', 'f4'),('ox', 'f4'), ('oy', 'f4'), ('oz', 'f4')])
+            # with open('test.ply', mode='wb') as f:
+            #     PlyData([PlyElement.describe(ply, 'segmentation')], text=True).write(f)
 
             pc_xyzrgb = results[:,:6][np.newaxis,:,:]
             pc_xyzrgbsemins = results[:,:8][np.newaxis,:,:]

@@ -13,6 +13,14 @@ def get_parser():
 
     ### pretrain
     parser.add_argument('--pretrain', type=str, default='', help='path to pretrain model')
+    # dyco3d options
+    parser.add_argument('--local_rank', type=int, default=0)
+    parser.add_argument('--threshold_ins', type=float, default=0.5)
+    parser.add_argument('--min_pts_num', type=int, default=50)
+
+    parser.add_argument('--resume', type=str, default=None)
+    parser.add_argument('--output_path', type=str, default=None)
+    parser.add_argument('--use_backbone_transformer', action='store_true', default=False)
 
     args_cfg = parser.parse_args()
     assert args_cfg.config is not None
@@ -27,3 +35,4 @@ def get_parser():
 
 cfg = get_parser()
 setattr(cfg, 'exp_path', os.path.join('exp', cfg.dataset, cfg.model_name, cfg.config.split('/')[-1][:-5]))
+# setattr(cfg, 'exp_path', cfg.output_path) # dyco3d
