@@ -7,7 +7,7 @@ Date: 06/2021
 * We want to fork pointgroup and get up to date with the original repo (although it doesn't seem to update since 2020)
 * We want to add the pointgroup repo as a subdirectory in my big 3D/Segmentation3D repo
   * Fork the repo on github web, now this forked repo has a link `https://github.com/symphonylyh/PointGroup.git`
-  * Go to the big 3D repo, add the forked repo as a subtree: `git subtree add --prefix Segmentation3D/PointGroup https://github.com/symphonylyh/PointGroup.git master --squash`. This will create a folder `3D/Segmentation3D/Points3D` which is the master branch of the torch-points3d repo. use `--squash` to merge as just one commit.
+  * Go to the big 3D repo, add the forked repo as a subtree: `git subtree add --prefix Segmentation3D/PointGroup https://github.com/symphonylyh/PointGroup.git main/master --squash`. This will create a folder `3D/Segmentation3D/PointGroup` which is the main/master branch of the PointGroup repo. use `--squash` to merge as just one commit.
   * Commit it in Github Desktop or by `git push origin main`. Now this repo is added as a subrepo
   * say the local repo is A, the forked repo is B, the original repo is C. ABC are different repos.
   * General push just goes to A by `git pull/push origin main`; to update A <--> B, `git subtree push --prefix Segmentation3D/Points3D https://github.com/symphonylyh/torch-points3d.git master` and `git subtree pull --prefix Segmentation3D/Points3D https://github.com/symphonylyh/torch-points3d.git master --squash`; to update B <-- C, on github web, click "Fetch Upstream" --> "Fetch and merge"
@@ -131,7 +131,7 @@ python test.py --config config/pointgroup_run1_scannet.yaml
 # change split: val, eval: True, this will, test_epoch to whatever epoch you want to test
 # change split: test, eval: False, save_instance: True on test set
 
-python test_synthetic.py --config config/pointgroup_default_primitives3d_colorless.yaml 
+python test_synthetic.py --config config/pointgroup_default_rocks3d-all_colorless.yaml 
 
 cd util
 python visualize.py --data_root=../dataset/scannetv2 --result_root=../exp/scannetv2/pointgroup/pointgroup_default_scannet/result/epoch384_nmst0.3_scoret0.09_npointt100 --room_name=scene0000_00 --room_split=test --task=instance_pred
@@ -144,4 +144,23 @@ python visualize.py --data_root=../dataset/scannetv2 --result_root=../exp/scanne
 * Semantic and Offset branches are simply MLP layers. Semantic is one MLP, offset is 2 MLPs.
 
 * this [push history](https://github.com/symphonylyh/3D/commit/b22dbd47f4a17e25f44c736ce74ffd9a5e5154fd#diff-50ee2a3bad7b3c5ee26e47b47885e1b680610e1afe7c6b7ac3432f32bd43fff2) records a change in pointgroup.py that originally ignores all semantic predictions <=1, but we have semantic starting from 0, so 0 and 1 are both object categories.
+
+## DyCo3D Guide
+
+DyCo3D is almost PointGroup with some extensions. To simplify the file structure, I just merge the two architecture.
+
+DyCo3D has some additional files such as: `checkpoint.py, data_loader_util.py, solver.py, util/draw_utils.py, util/warpper.py, model/transformer.py, config/dyco3d_multigpu_scannet.yaml`. It has its own `test.py, train.py` and `model/pointgroup/pointgroup.py, data/scannetv2_inst.py`, I just added a suffix `_dyco3d` to them. In `train.py, test.py`, change the `from model.pointgroup.pointgroup import PointGroup as Network` lines accordingly. For the data loader, I just copy DyCo3D's `scannetv2_inst.py` and modify to `synthetics3d_dyco3d.py` similar to I did in PointGroup.
+
+train by `python train_dyco3d.py  --config config/dyco3d_singlegpu_rocks3d-all_colorless.yaml --use_backbone_transformer`. In the yaml file, remember the DyCo3D doesn't define epoch, so we need to manually set `max_iter, save_freq, prepare_epochs` based on dataset size. In each iteration, it trains on a batch size of data
+
+test by `python test_dyco3d.py  --config config/dyco3d_singlegpu_rocks3d-all_colorless.yaml --resume exp/rocks3d-all_colorless/pointgroup/dyco3d_singlegpu_rocks3d-all_colorless/checkpoint_iter_5400.pth --use_backbone_transformer` 
+
+Some other modifications are required:
+
+* In pointgroup_dyco3d.py: generate_proposal(), the logical operator should be changed based on this [issue](https://github.com/aim-uofa/DyCo3D/issues/8).
+* In pointgroup_dyco3d.py: forward(), the object_idxs should include semantic > -1, same as pointgroup modification
+* **Important: in pointgroup_dyco3d.py: loss_fn, the `inst_gt_mask` only includes semantic class >1, modify it at line 801.**
+* Include dice loss from the latest release
+
+
 
