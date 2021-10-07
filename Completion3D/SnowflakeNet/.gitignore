@@ -1,0 +1,82 @@
+## General
+
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.cuo
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+
+# Compiled protocol buffers
+*.pb.h
+*.pb.cc
+*_pb2.py
+
+# Compiled python
+*.pyc
+
+# Compiled MATLAB
+*.mex*
+
+# IPython notebook checkpoints
+.ipynb_checkpoints
+
+# Editor temporaries
+*.swp
+*~
+
+# Sublime Text settings
+*.sublime-workspace
+*.sublime-project
+
+# Eclipse Project settings
+*.*project
+.settings
+
+# QtCreator files
+*.user
+
+# PyCharm files
+.idea
+
+# Visual Studio Code files
+.vscode
+
+# OSX dir files
+.DS_Store
+
+# personal
+__pycache__/
+exp/
+*.egg-info/
+build/
+dist/
+
+
+*.tsv
+*.npy
+*.zip
+
+# ignore dataset but keep some data processing scripts
+dataset/*
+!dataset/scannetv2/
+dataset/scannetv2/*
+!dataset/scannetv2/*.py
+!dataset/primitives3d/
+dataset/primitives3d/*
+!dataset/primitives3d/*.py
+!dataset/primitives3d_colorless/
+dataset/primitives3d_colorless/*
+!dataset/primitives3d_colorless/*.py
+
+
+

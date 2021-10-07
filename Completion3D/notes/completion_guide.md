@@ -41,7 +41,7 @@ git subtree add --prefix Completion3D/SnowflakeNet https://github.com/symphonyly
 Update pip requirements:
 
 * pprint is built-in python library, remove it from pip list
-* although pytorch > 1.4.0 is required, we force to use 1.8.0
+* although pytorch > 1.4.0 is required, we force to use 1.8.0. And conda is preferred, so we remove it from pip list. pip install torch has many issues with missing headers, etc.
 
 On Windows:
 
@@ -49,6 +49,19 @@ On Windows:
 // create an empty folder named snowflake
 conda create --prefix H:\envs\snowflake python=3.7
 conda activate H:\envs\snowflake
-H:\envs\grnet\Scripts\pip.exe install -r requirements.txt
+
+conda install pytorch==1.8.0 torchvision==0.9.0 torchaudio==0.8.0 cudatoolkit=10.2 -c pytorch # follow: https://pytorch.org/get-started/previous-versions/, our windows desktop is cuda 10.2
+H:\envs\snowflake\Scripts\pip.exe install -r requirements.txt
+
+
+```
+
+On Ubuntu:
+
+```bash
+conda create --name pytorch180cudnn111 python=3.7 # this is done in pointgroup installation
+conda activate pytorch180cudnn111
+conda install pytorch==1.8.0 torchvision==0.9.0 torchaudio==0.8.0 cudatoolkit=11.1 -c pytorch -c conda-forge 
+# pytorch 1.8.0 and cudnn 11.1 seems to work best on RTX 3090 (note Ampere 3090 only supports CUDA >= 11)
 ```
 
