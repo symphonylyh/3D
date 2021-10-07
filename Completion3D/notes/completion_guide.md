@@ -38,11 +38,15 @@ git subtree add --prefix Completion3D/SnowflakeNet https://github.com/symphonyly
 // commit to github
 ```
 
+Update pip requirements:
 
+* pprint is built-in python library, remove it from pip list
+* although pytorch > 1.4.0 is required, we force to use 1.8.0
 
 On Windows:
 
 ```bash
+// create an empty folder named snowflake
 conda create --prefix H:\envs\snowflake python=3.7
 conda activate H:\envs\snowflake
 H:\envs\grnet\Scripts\pip.exe install -r requirements.txt
