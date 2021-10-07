@@ -30,11 +30,21 @@ GRNet, **PMP-Net, SnowflakeNet** have similar folder setup steps. PMP-Net and Sn
 
 
 
-On Ubuntu:
+Fork repo:
 
 ```bash
-conda create --prefix H:\envs\grnet python=3.7
-conda activate H:\envs\grnet
+// fork on github
+git subtree add --prefix Completion3D/SnowflakeNet https://github.com/symphonylyh/SnowflakeNet.git main --squash
+// commit to github
+```
+
+
+
+On Windows:
+
+```bash
+conda create --prefix H:\envs\snowflake python=3.7
+conda activate H:\envs\snowflake
 H:\envs\grnet\Scripts\pip.exe install -r requirements.txt
 ```
 
