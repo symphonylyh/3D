@@ -5,7 +5,7 @@ matplotlib
 numpy
 open3d==0.10.0.0
 opencv-python
-pyexr
+#pyexr
 scipy
 tensorboardX==1.2
 torch>=1.4.0
