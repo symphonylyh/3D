@@ -369,6 +369,7 @@ class KittiDataLoader(object):
 # //////////////////////////////////////////// = Dataset Loader Mapping = //////////////////////////////////////////// #
 
 DATASET_LOADER_MAPPING = {
+    'rocks3d-rr3-rr4-mix': Completion3DDataLoader,
     'Completion3D': Completion3DDataLoader,
     'Completion3DPCCT': Completion3DPCCTDataLoader,
     'ShapeNet': ShapeNetDataLoader,

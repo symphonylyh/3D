@@ -67,16 +67,11 @@ dist/
 *.zip
 
 # ignore dataset but keep some data processing scripts
-dataset/*
-!dataset/scannetv2/
-dataset/scannetv2/*
-!dataset/scannetv2/*.py
-!dataset/primitives3d/
-dataset/primitives3d/*
-!dataset/primitives3d/*.py
-!dataset/primitives3d_colorless/
-dataset/primitives3d_colorless/*
-!dataset/primitives3d_colorless/*.py
+datasets/*
+!datasets/*.py
+!datasets/*.json
+!datasets/*.txt
+
 
 
 

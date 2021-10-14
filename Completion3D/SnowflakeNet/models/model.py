@@ -174,7 +174,7 @@ class SnowflakeNet(nn.Module):
             point_cloud: (B, N, 3)
         """
         pcd_bnc = point_cloud
-        point_cloud = point_cloud.permute(0, 2, 1).contiguous()
+        point_cloud = point_cloud.permute(0, 2, 1).contiguous() # to (B,3,N) since feature extractor implements this shape
         feat = self.feat_extractor(point_cloud)
         out = self.decoder(feat, pcd_bnc, return_P0=return_P0)
         return out
