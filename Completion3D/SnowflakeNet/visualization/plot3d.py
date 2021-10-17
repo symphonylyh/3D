@@ -96,7 +96,7 @@ class Plot3DSubFigure():
 Figure level control. A figure is made of many subplots (each of them is a SceneWidget object).
 '''
 class Plot3DFigure:
-    def __init__(self, app, figure_name, viewports_dim=(1,1), width=1920, height=1080, sync_camera=True, plot_boundary=True, show_axes=True, show_subtitles=True, background_color=(0,0,0,1), snapshot_path='./'):
+    def __init__(self, app, figure_name, viewports_dim=(1,1), width=1920, height=1080, sync_camera=True, plot_boundary=True, show_axes=True, show_subtitles=True, background_color=(0,0,0,1), snapshot_path='./', snapshot_prefix=''):
         self.app = app
         self.name = figure_name
         self.viewports_dim = viewports_dim
@@ -107,10 +107,11 @@ class Plot3DFigure:
         self.show_axes = show_axes
         self.show_subtitles = show_subtitles
         self.snapshot_path = snapshot_path
+        self.snapshot_prefix = snapshot_prefix 
 
         # set the background color of rendering
         self.window.renderer.set_clear_color(background_color)
-
+        
         # create subplot viewports. Caveat: [[None] * self.cols] * self.rows is WRONG!!! it's shallow copy
         self.viewports = [[None] * self.cols for _ in range(self.rows)]
         self.viewport_titles = [[None] * self.cols for _ in range(self.rows)]
@@ -170,12 +171,7 @@ class Plot3DFigure:
             set key event (to save snapshot by press S)
             '''
             if event.key == gui.KeyName.S and event.type == gui.KeyEvent.UP:
-                window_size = self.window.size 
-                subplot_width, subplot_height = int(window_size.width / self.cols), int(window_size.height / self.rows)
-                for i in range(self.rows):
-                    for j in range(self.cols): 
-                        img = self.app.gui.render_to_image(self.viewports[i][j].scene, subplot_width, subplot_height)
-                        o3d.io.write_image(os.path.join(self.snapshot_path, self.viewport_titles[i][j].text + '.png'), img, quality=9)
+                self.save_snapshots()
                 # augmented functinality is handled. base functionality still works
                 return gui.SceneWidget.EventCallbackResult.HANDLED
             
@@ -242,6 +238,17 @@ class Plot3DFigure:
         # set the layout
         self.window.set_on_layout(on_layout)
 
+    def save_snapshots(self):
+        ''' 
+        Save all subfigures to file by concatenate a user-given prefix and the subtitle of each subfigure. Note: image will be distorted when having many subfigures. Should save snapshot when there is only one figure in the window!
+        ''' 
+        window_size = self.window.size 
+        subplot_width, subplot_height = int(window_size.width / self.cols), int(window_size.height / self.rows)        
+        for i in range(self.rows):
+            for j in range(self.cols): 
+                img = self.app.gui.render_to_image(self.viewports[i][j].scene, subplot_width, subplot_height)
+                o3d.io.write_image(os.path.join(self.snapshot_path, self.snapshot_prefix+'_'+self.viewport_titles[i][j].text + '.png').replace("\n",""), img, quality=9) # remove any \n character from the subtitle
+
     def close(self):
         '''
         Close the figure.
@@ -259,13 +266,14 @@ For point cloud drawing, if the point cloud has been divided into blocks and loa
 class PointCloudVis:
     
     @staticmethod
-    def get_default_material_pointcloud():
+    def get_default_material_pointcloud(point_size=0.1):
         '''
         get a default material that can be used to render different geometries
         see Material fields at: http://www.open3d.org/docs/release/python_api/open3d.visualization.rendering.Material.html. For example, mat.base_color = (0,0,1,1)
         '''
         mat = rendering.Material()
         mat.shader = "defaultUnlit"
+        mat.point_size=point_size
         return mat
    
     @staticmethod
@@ -284,7 +292,7 @@ class PointCloudVis:
         return colors
 
     @staticmethod
-    def draw_pc_xyz(subfigure_handle, pc_xyz, color=None):
+    def draw_pc_xyz(subfigure_handle, pc_xyz, color=None, point_size=0.1):
         '''
         Draw points coordinates with uniform color
             subfigure_handle: Plot3DSubfigure() object
@@ -295,7 +303,7 @@ class PointCloudVis:
         pc = o3d.geometry.PointCloud()
         pc.points = o3d.utility.Vector3dVector(pc_xyz) # from numpy to o3d format
         pc.paint_uniform_color(np.array(color))
-        plot_handle.scene.add_geometry("Raw Points", pc, PointCloudVis.get_default_material_pointcloud())
+        plot_handle.scene.add_geometry("Raw Points", pc, PointCloudVis.get_default_material_pointcloud(point_size=point_size))
         plot_handle.setup_camera(60, plot_handle.scene.bounding_box, plot_handle.scene.bounding_box.get_center())
 
     @staticmethod

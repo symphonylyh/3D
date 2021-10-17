@@ -56,7 +56,7 @@ conda clean --all --dry-run # show prunable packages. remove --dry-run to actual
 H:\envs\snowflake\Scripts\pip.exe cache purge
 conda install pytorch==1.8.0 torchvision==0.9.0 torchaudio==0.8.0 cudatoolkit=10.2 -c pytorch # follow: https://pytorch.org/get-started/previous-versions/, our windows desktop is cuda 10.2
 H:\envs\snowflake\Scripts\pip.exe install -r requirements.txt
-H:\envs\snowflake\Scripts\pip.exe install pymeshlab plyfile
+H:\envs\snowflake\Scripts\pip.exe install pymeshlab plyfile pandas openpyxl
 ```
 
 On Ubuntu:
@@ -120,17 +120,61 @@ Taxonomy ID is a unique ID for an object category, and name. The string in the s
 
 ### Train
 
+Finally I prepared my dataset similar to ShapeNet (2048 input & 16384 output) so the model architecture should be same as the PCN file with up_factor=[4,8]. Change this in train/test/inference_rocks3d.py. But my dataset format is h5 so I need to use the same dataloader as Completion3D. So in data_loaders.py, remember to add the mapping at the end of the file.
+
 ```bash
 python main_rocks3d.py
-
+python main_rocks3d.py --test or --inference
 ```
 
 ### Architecture
 
-**Feature Extractor**
+**Encoder Part - Feature Extractor: PointNet++ & PointTransformer**
 
 * 3 layers of PointNet++ Set Abstraction (SA) module to aggregate point features from local to global, interleaved by 2 layers of point transformer to incorporate local shape context. Point features are extracted by point transformer. 
-* The input can be arbitrary number of points, they will first be re-sampling to a fixed input points (512) in the PointNet SA module by sample_and_group_knn(), using the furthest_point_sampling in PointNet++.
+* The input can be arbitrary number of points, they will first be re-sampling to a fixed input points (512) in the PointNet SA module by sample_and_group_knn(), using the farthest_point_sampling (FPS) in PointNet++. Then each point will search feature in a local regions of (16) neighboring points. Finally, go through MLP layers the entire partial cloud will be extracted as one global feature vector of size 1xC (=512).
+
+**Footnote: what is farthest point sampling (FPS) algorithm?**
+
+A sampling algorithm that can describe shape efficiently.
+
+* Select an initial point set S={p0}, compute a distance array D that stores the distance from all other points to p0. The initial point could be randomly selected (but unstable), or more often chosen as the point that is farthest from the centroid of cloud (deterministic).
+* pick p1 with the max distance D[i], add S={p0,p1}.
+* compute distance from all points to p1, if d(pi,p1) < D[i], update D[i]. From this, the D array maintains the minimum distance from all points to the current set S.
+* pick p2 with the max distance D[i], add S={p0,p1,p2}. Repeat until we sample target N points.
+* The distance metric could be Euclidean for point cloud or geodesic for mesh.
+
+**Decoder Part - Seed Generation (Coarse-Grained Decoder): Deconvolution & MLP**
+
+* From the feature vector, generate a coarse complete cloud of 256 points
+* do 1D deconvolution (transposed convolution) with a large receptive field (128) to get another C'=128 local feature vector per each of the 256 coarse point. Then, tile the C=512 global feature vector for each coarse point and concatenate with the deconved local feature, we have Nc x (C+C')=256x(512+128) extended features. **Note: the so-called point-wise splitting operation is essentially just this per-point deconvolution operation!**
+* Pass the feature through MLPs and Conv1d, generate Nc=256 coarse points as the seeds, the variable `pcdc`.
+* Concatenate the Nc=256 seeds (coarse complete clouds) with the N=2048 input partial clouds and do FPS to get N0=512 sparse cloud P0 for the next upsampling steps.
+
+**Decoder Part - Upsampling (Fine-Grained Decoder): Snowflake Point Deconvolution (SPD) & Skip Transformer (ST)**
+
+* SPD aims to upsample the points by splitting each parent point into multiple child points, which is done by first duplicating the parent points and then adding variations to the duplicates. Previous folding-based methods samples a same 2D grid around each parent point, which ignores the local shape characteristics around the parent point. SPD designs the point-wise splitting operation that fully leverages the local geometric information (features) around the parent point and generates the child points.
+* Skip transformer is the key design. So the major contribution of SnowflakeNet is in the decoder process. Suppose the upsampling factor is r, the parent points are first duplicated with r copies. Each point is then passed through a ST and point splitting module and MLPs to get per-point displacement feature vectors K. Then a MLP compute the point coordinate shift deltaP (this is similar to pointgroup! maybe can utilize this ST structure too?). By adding the shift to the duplicate coordinates we get the upsampled points.
+* ST uses the PointNet features (i.e. some MLP and Conv1d layers) as query Q, generates the shape context feature H, and further deconvolute (i.e. PS) to get the internal displacement features as key K. Q and H are of the dimension of the (i-1)-th cloud, and K is of the upsampled dimension of i-th cloud. Per-point q and k vectors are concatenated to be the value vector v, and Attention vector a is estimated based q and k. The attention vector denotes how much attention the shape context feature pays to each of the value vector v.
+* It's important that displacement feature K from last SPD K_{i-1} is considered in the current i-th SPD step. This allows the shape context to propagate along the sequential upsampling process. In summary, skip transformer learn and refine the spatial shape context between the parent points and child points. "skip" represents the connection between the displacement feature K from previous SPD layer to the current layer.
+* When upsampling factor r=1, it means to rearrange the seed points. Usually the upsampling sequence starts with a r=1, i.e. [1,2,2] or [1,4,8].
+
+**Loss: Chamfer distance**
+
+* The ground-truth cloud is down-sampled to the same density of Pc, P1, P2, P3, and Chamfer distance is used to calculated the loss.
+* Another loss is preservation loss or partial matching loss. This is just a single-side Chamfer distance, i.e. S1 match to S2.
+
+**Footnote: what is Chamfer distance?**
+
+* measure the discrepancy between two point sets, S1 and S2.
+
+
+$$
+d_{CD, L_2}(S_1,S_2)=\frac{1}{N_1}\sum_{x\in S_1}\min_{y\in S_2} \lVert (x-y)^2 \rVert + \frac{1}{N_2}\sum_{y\in S_2}\min_{x\in S_1} \lVert (y-x)^2 \rVert
+\\
+d_{CD, L_1}(S_1,S_2)=\frac{1}{N_1}\sum_{x\in S_1}\min_{y\in S_2} \lVert x-y \rVert + \frac{1}{N_2}\sum_{y\in S_2}\min_{x\in S_1} \lVert y-x) \rVert
+$$
+
 
 ### Questions
 

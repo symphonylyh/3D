@@ -10,9 +10,9 @@ import sys
 import torch
 from pprint import pprint
 from config_rocks3d import cfg
-from core.train_c3d import train_net
-from core.test_c3d import test_net
-from core.inference_c3d import inference_net
+from core.train_rocks3d import train_net
+from core.test_rocks3d import test_net
+from core.inference_rocks3d import inference_net
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = cfg.CONST.DEVICE
 

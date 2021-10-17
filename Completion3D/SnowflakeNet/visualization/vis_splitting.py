@@ -34,7 +34,7 @@ def show_points(points, color=None):
     o3d.visualization.draw_geometries([test_pcd], window_name="Open3D2", point_show_normal=True)
 
 
-def create_sphere_at_xyz(xyz, colors=None, radius=0.006, resolution=4):
+def create_sphere_at_xyz(xyz, colors=None, radius=0.006, resolution=4, normal=False):
     """create a mesh sphere at xyz
     Args:
         xyz: arr, (3,)
@@ -44,7 +44,8 @@ def create_sphere_at_xyz(xyz, colors=None, radius=0.006, resolution=4):
         sphere: mesh sphere
     """
     sphere = o3d.geometry.TriangleMesh.create_sphere(radius=radius, resolution=resolution)
-    # sphere.compute_vertex_normals()
+    if normal:
+        sphere.compute_vertex_normals()
     if colors is None:
         sphere.paint_uniform_color([0.7, 0.1, 0.1])  # To be changed to the point color.
     else:
@@ -53,7 +54,7 @@ def create_sphere_at_xyz(xyz, colors=None, radius=0.006, resolution=4):
     return sphere
 
 
-def create_pcd_mesh(point_cloud, colors=None):
+def create_pcd_mesh(point_cloud, colors=None, radius=0.006, normal=False):
     """create a mesh spheres for all coordinates in point_cloud
     Args:
         point_cloud: arr, (m, 3)
@@ -64,7 +65,7 @@ def create_pcd_mesh(point_cloud, colors=None):
     """
     mesh = []
     for i in range(point_cloud.shape[0]):
-        mesh.append(create_sphere_at_xyz(point_cloud[i], colors=colors))
+        mesh.append(create_sphere_at_xyz(point_cloud[i], colors=colors, radius=radius, normal=normal))
 
     mesh_pcd = mesh[0]
     for i in range(1, len(mesh)):
@@ -87,7 +88,7 @@ def rotation_matrix_from_vectors(vec1, vec2):
     return rotation_matrix
 
 
-def get_line(point1, point2, radius=0.0003, resolution=7, colors=None):
+def get_line(point1, point2, radius=0.0003, resolution=7, colors=None, normal=False):
     """get mesh of the line between two points
     Args:
         point1: arr (3, )
@@ -105,7 +106,8 @@ def get_line(point1, point2, radius=0.0003, resolution=7, colors=None):
         radius=radius,
         height=height,
         resolution=resolution)
-    cylinder.compute_vertex_normals()
+    if normal:
+        cylinder.compute_vertex_normals()
     cylinder.paint_uniform_color(colors)
 
     mid = (point1 + point2) / 2
@@ -122,7 +124,7 @@ def get_line(point1, point2, radius=0.0003, resolution=7, colors=None):
     return cylinder
 
 
-def get_line_set(pcd1, pcd2, radius=0.001, resolution=10, colors=[0.7, 0.7, 0.7]):
+def get_line_set(pcd1, pcd2, radius=0.001, resolution=10, colors=[0.7, 0.7, 0.7], normal=False):
     """get line set between two point clouds that have point correspondence
     Args:
         point_cloud1: arr, (n, 3)
@@ -133,7 +135,7 @@ def get_line_set(pcd1, pcd2, radius=0.001, resolution=10, colors=[0.7, 0.7, 0.7]
     """
     lines_mesh = []
     for i in range(pcd1.shape[0]):
-        lines_mesh.append(get_line(pcd1[i], pcd2[i], radius=radius, resolution=resolution, colors=colors))
+        lines_mesh.append(get_line(pcd1[i], pcd2[i], radius=radius, resolution=resolution, colors=colors, normal=normal))
 
     mesh = lines_mesh[0]
     for i in range(1, len(lines_mesh)):
@@ -142,7 +144,7 @@ def get_line_set(pcd1, pcd2, radius=0.001, resolution=10, colors=[0.7, 0.7, 0.7]
     return mesh
 
 
-def splitting_paths(pcd1, pcd2, inds=None, colors_points=colors_points, colors_paths=colors_path2):
+def splitting_paths(pcd1, pcd2, inds=None, colors_points=colors_points, colors_paths=colors_path2, points_radius=0.006, paths_radius=0.001):
     """splitting paths between pcd1 and pcd2
     Args:
         pcd1: arr, (n1, 3)
@@ -156,13 +158,20 @@ def splitting_paths(pcd1, pcd2, inds=None, colors_points=colors_points, colors_p
     n2 = pcd2.shape[0]
     up_factor = n2 // n1
     pcd1 = np.tile(pcd1, (1, up_factor)).reshape((n2, 3))
-    mesh_point1 = create_pcd_mesh(pcd1, colors=colors_points)
+
     displacements = None
     if inds is None:
         inds = np.arange(n1)
+
+    # distinguish highlight points (colored) and inactive points (gray)
+    mesh_point_inactive = create_pcd_mesh(pcd1[np.setdiff1d(np.arange(n1),inds)], colors=(0.5,0.5,0.5), radius=points_radius, normal=True)
+    mesh_point_highlight = create_pcd_mesh(pcd1[inds], colors=colors_points, radius=points_radius, normal=True)
+    # mesh_point1 = create_pcd_mesh(pcd1, colors=colors_points, radius=points_radius)
+    mesh_point1 = mesh_point_highlight + mesh_point_inactive
+
     for i in inds:
         new_dispacements = get_line_set(pcd1[i * up_factor: (i + 1) * up_factor],
-                                        pcd2[i * up_factor: (i + 1) * up_factor], colors=colors_paths)
+                                        pcd2[i * up_factor: (i + 1) * up_factor], radius=paths_radius, colors=colors_paths, normal=True)
         if displacements is None:
             displacements = new_dispacements
         else:
@@ -173,7 +182,7 @@ def splitting_paths(pcd1, pcd2, inds=None, colors_points=colors_points, colors_p
 
 
 def splitting_paths_triple(pcd1, pcd2, pcd3, inds=None, colors_points=colors_points, colors_path1=colors_path1,
-                           colors_path2=colors_path2):
+                           colors_path2=colors_path2, points_radius=0.006, paths_radius1=0.001, paths_radius2=0.001):
     """splitting path of p1 to p2 to p3
     Args:
         pcd1: arr, (n1, 3)
@@ -198,14 +207,18 @@ def splitting_paths_triple(pcd1, pcd2, pcd3, inds=None, colors_points=colors_poi
     if inds is None:
         inds = np.arange(n1)
 
-    mesh_point1 = create_pcd_mesh(pcd1, colors=colors_points)
+    # distinguish highlight points (colored) and inactive points (gray)
+    mesh_point_inactive = create_pcd_mesh(pcd1[np.setdiff1d(np.arange(n1),inds)], colors=(0.5,0.5,0.5), radius=points_radius, normal=True)
+    mesh_point_highlight = create_pcd_mesh(pcd1[inds], colors=colors_points, radius=points_radius, normal=True)
+    # mesh_point1 = create_pcd_mesh(pcd1, colors=colors_points, radius=points_radius)
+    mesh_point1 = mesh_point_highlight + mesh_point_inactive
     displacements = None
 
     for j, i in enumerate(inds):
         new_dispacements = get_line_set(pcd1_to_2[i * up_factor_1: (i + 1) * up_factor_1],
-                                        pcd2[i * up_factor_1: (i + 1) * up_factor_1], colors=colors_path1)
+                                        pcd2[i * up_factor_1: (i + 1) * up_factor_1], radius=paths_radius1, colors=colors_path1, normal=True)
         new_dispacements += get_line_set(pcd2_to_3[i * up_factor: (i + 1) * up_factor],
-                                         pcd3[i * up_factor: (i + 1) * up_factor], colors=colors_path2)
+                                         pcd3[i * up_factor: (i + 1) * up_factor], radius=paths_radius2, colors=colors_path2, normal=True)
 
         if displacements is None:
             displacements = new_dispacements
@@ -239,7 +252,7 @@ def Indx_of_range(pcd, rg=[0, 1], axis=0):
 def splittings_by_range(pcd1, pcd2, pcd3,
                         range_x=(0, 0.5),
                         range_y=(0, 0.1),
-                        range_z=(0, 0.5)):
+                        range_z=(0, 0.5), colors_points=colors_points,colors_path1=colors_path1, colors_path2=colors_path2,  points_radius=0.006, paths_radius1=0.001, paths_radius2=0.001):
     """get splitting paths by specifying the range on each axis
     Args:
         pcd1: arr, (n1, 3)
@@ -254,12 +267,16 @@ def splittings_by_range(pcd1, pcd2, pcd3,
     """
 
     idx = Indx_of_range(pcd1, range_x, axis=0)
-    idx_1 = Indx_of_range(pcd2, range_y, axis=1)
+    idx_1 = Indx_of_range(pcd1, range_y, axis=1)
     idx = idx & idx_1
 
     idx_2 = Indx_of_range(pcd1, range_z, axis=2)
     idx = idx & idx_2
-    print(idx)
+    print("Point IDs in the range", idx)
 
-    mesh_out = splitting_paths_triple(pcd1, pcd2, pcd3, idx)
+    idx = np.array(list(idx), dtype=int)
+
+    assert len(idx) != 0 and len(idx) != pcd1.shape[0], "No valid points or all points in this range!"
+
+    mesh_out = splitting_paths_triple(pcd1, pcd2, pcd3, idx, colors_points=colors_points,colors_path1=colors_path1, colors_path2=colors_path2, points_radius=points_radius, paths_radius1=paths_radius1, paths_radius2=paths_radius2)
     return mesh_out

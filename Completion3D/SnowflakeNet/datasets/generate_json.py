@@ -5,7 +5,7 @@ Generate the metadata json file for the dataset.
 import os 
 import json 
 
-dataset_name = 'rocks3d-rr4'
+dataset_name = 'rocks3d'
 
 data = {}
 

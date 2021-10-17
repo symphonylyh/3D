@@ -11,9 +11,9 @@ cfg                                              = __C
 #
 __C.DATASETS                                     = edict()
 __C.DATASETS.COMPLETION3D                        = edict()
-__C.DATASETS.COMPLETION3D.CATEGORY_FILE_PATH     = './datasets/rocks3d-rr3-rr4-mix.json'
-__C.DATASETS.COMPLETION3D.PARTIAL_POINTS_PATH    = './datasets/rocks3d-rr3-rr4-mix/%s/partial/%s/%s.h5'
-__C.DATASETS.COMPLETION3D.COMPLETE_POINTS_PATH   = './datasets/rocks3d-rr3-rr4-mix/%s/gt/%s/%s.h5'
+__C.DATASETS.COMPLETION3D.CATEGORY_FILE_PATH     = './datasets/rocks3d.json'
+__C.DATASETS.COMPLETION3D.PARTIAL_POINTS_PATH    = './datasets/rocks3d/%s/partial/%s/%s.h5'
+__C.DATASETS.COMPLETION3D.COMPLETE_POINTS_PATH   = './datasets/rocks3d/%s/gt/%s/%s.h5'
 __C.DATASETS.SHAPENET                            = edict()
 __C.DATASETS.SHAPENET.CATEGORY_FILE_PATH         = './datasets/ShapeNet.json'
 __C.DATASETS.SHAPENET.N_RENDERINGS               = 8
@@ -26,8 +26,8 @@ __C.DATASETS.SHAPENET.COMPLETE_POINTS_PATH       = '/path/to/datasets/PCN/%s/com
 #
 __C.DATASET                                      = edict()
 # Dataset Options: Completion3D, ShapeNet, ShapeNetCars
-__C.DATASET.TRAIN_DATASET                        = 'rocks3d-rr3-rr4-mix'
-__C.DATASET.TEST_DATASET                         = 'rocks3d-rr3-rr4-mix'
+__C.DATASET.TRAIN_DATASET                        = 'rocks3d'
+__C.DATASET.TEST_DATASET                         = 'rocks3d'
 
 #
 # Constants
@@ -44,7 +44,7 @@ __C.CONST.N_INPUT_POINTS                         = 2048
 __C.DIR                                          = edict()
 __C.DIR.OUT_PATH                                 = 'exp'
 __C.CONST.DEVICE                                 = '0'
-__C.CONST.WEIGHTS                                = './exp/checkpoints/2021-10-12T22-02-29/ckpt-best.pth' # 'ckpt-best.pth'  # specify a path to run test and inference
+__C.CONST.WEIGHTS                                = './exp/checkpoints/2021-10-15T03-30-37/ckpt-best.pth' # 'ckpt-best.pth'  # specify a path to run test and inference, comment this line during training unless we want to resume training
 
 #
 # Memcached
@@ -65,8 +65,8 @@ __C.NETWORK.N_SAMPLING_POINTS                    = 2048
 # Train
 #
 __C.TRAIN                                        = edict()
-__C.TRAIN.BATCH_SIZE                             = 32
-__C.TRAIN.N_EPOCHS                               = 150
+__C.TRAIN.BATCH_SIZE                             = 16
+__C.TRAIN.N_EPOCHS                               = 200
 __C.TRAIN.SAVE_FREQ                              = 25
 __C.TRAIN.LEARNING_RATE                          = 0.001
 __C.TRAIN.LR_MILESTONES                          = [50, 100, 150, 200, 250]
