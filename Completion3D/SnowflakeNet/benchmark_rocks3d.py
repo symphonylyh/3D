@@ -309,7 +309,7 @@ class CompareShape:
         for i, name in enumerate(plot_name):
             fig = plt.figure()
             markersize = 3
-            pass_point = np.min(data_gt[i] * 0.8)
+            pass_point = np.min(data_gt[i] * 0.95)
             plt.axline((pass_point, pass_point), slope=1, linestyle='--', linewidth=1, color='k', label='Reference Line')
             plt.plot(data_gt[i], data_pred[i], 'o', markerfacecolor='none', markersize=markersize)
             plt.gca().set_aspect('equal')
