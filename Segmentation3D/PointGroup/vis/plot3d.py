@@ -424,8 +424,10 @@ class PointCloudVis:
                         bbox_wireframe = o3d.geometry.LineSet.create_from_oriented_bounding_box(bbox)
 
                     if bbox_color == 'black':
+                        bbox.color = (0,0,0)
                         bbox_wireframe.paint_uniform_color((0,0,0))
                     else:
+                        bbox.color = ins_colors[id]
                         bbox_wireframe.paint_uniform_color(ins_colors[id])
                     
                     # plot_handle.scene.add_geometry(f"Instance BBox {id}", bbox_wireframe, PointCloudVis.get_default_material_lineset())

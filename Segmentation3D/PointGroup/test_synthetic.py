@@ -60,7 +60,7 @@ def test(model, model_fn, epoch):
 
         matches = {}
         for i, batch in enumerate(dataloader):
-            if i < 14: # 2, 7, 15
+            if i < 0: # 2, 7, 15
                 continue
             N = batch['feats'].shape[0]
             test_scene_name = dataset.test_file_names[int(batch['id'][0])].split('/')[-1][:-4]

@@ -52,7 +52,7 @@ TRAIN:
 
 GROUP:
   ### point grouping
-  cluster_radius: 0.008
+  cluster_radius: 0.008 # for RR4_S5 and S6 I used 0.009
   cluster_meanActive: 50 #50
   cluster_shift_meanActive: 100 #300
   cluster_npoint_thre: 50 #50
