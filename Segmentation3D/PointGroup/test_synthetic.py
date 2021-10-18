@@ -60,6 +60,8 @@ def test(model, model_fn, epoch):
 
         matches = {}
         for i, batch in enumerate(dataloader):
+            if i < 14: # 2, 7, 15
+                continue
             N = batch['feats'].shape[0]
             test_scene_name = dataset.test_file_names[int(batch['id'][0])].split('/')[-1][:-4]
             print("XXX", test_scene_name)
@@ -116,6 +118,8 @@ def test(model, model_fn, epoch):
             proposals_pred = proposals_pred[score_mask]
             semantic_id = semantic_id[score_mask]
 
+            print(f'Proposals after score threshold: {proposals_pred.shape[0]}')
+
             ##### npoint threshold (only proposals with enough points are preserved)
             proposals_pointnum = proposals_pred.sum(1)
             npoint_mask = (proposals_pointnum > cfg.TEST_NPOINT_THRESH)
@@ -123,6 +127,8 @@ def test(model, model_fn, epoch):
             proposals_pred = proposals_pred[npoint_mask]
             semantic_id = semantic_id[npoint_mask]
 
+            print(f'Proposals after point number threshold: {proposals_pred.shape[0]}')
+            
             ##### nms
             if semantic_id.shape[0] == 0:
                 pick_idxs = np.empty(0)
@@ -143,9 +149,17 @@ def test(model, model_fn, epoch):
             print(f'Total Final Proposals: {nclusters}')
 
             ##### visualize & write to PLY file
-            coords_np = batch['locs_float'].numpy() # 0～2
-            colors_np = batch['feats'].numpy() # 3～5, [-1,1]
-            colors_np = (colors_np + 1) * 127.5 # converted back to 0-255 scale
+            coords_np = batch['locs_float'].numpy() # 0～2, this is the raw coords, batch['locs'] is voxelized coords
+            bbox = coords_np.max(axis=0) - coords_np.min(axis=0)
+            print('BBox:', bbox)
+            # raw colors were zero-out by prepare_data_colorless.py, so here we retrieve the color from the ply file rather than the pth processed file
+            file_path = os.path.dirname(dataset.test_file_names[int(batch['id'][0])])
+            raw_filename = os.path.splitext(dataset.test_file_names[int(batch['id'][0])])[0]
+            raw_filestem = os.path.basename(raw_filename)
+            raw_file = PlyData().read(raw_filename+'.ply')
+            colors_np = np.array([list(x) for x in raw_file.elements[0]]).astype(np.float32)[:, 3:6]
+            # colors_np = batch['feats'].numpy() # 3～5, [-1,1]
+            # colors_np = (colors_np + 1) * 127.5 # converted back to 0-255 scale
 
             sem_labels_np = semantic_pred.cpu().numpy()[:,np.newaxis] # 6, per-point sem label, 0~Nclass-1, -1 means no class
             instances = clusters.cpu().numpy()
@@ -161,11 +175,13 @@ def test(model, model_fn, epoch):
             results_shift = np.concatenate([coords_np+offsets_np, colors_np, sem_labels_np, ins_labels_np, ins_scores_np, offsets_np], axis=1)
 
             # write segmentation results to PLY
-            # ply_list = [tuple(results[i]) for i in range(results.shape[0])]
-            # ply = np.array(ply_list,
-            #              dtype=[('x', 'f4'), ('y', 'f4'), ('z', 'f4'),('r', 'u1'), ('g', 'u1'), ('b', 'u1'),('sem', 'i4'), ('ins', 'i4'), ('score', 'f4'),('ox', 'f4'), ('oy', 'f4'), ('oz', 'f4')])
-            # with open('test.ply', mode='wb') as f:
-            #     PlyData([PlyElement.describe(ply, 'segmentation')], text=True).write(f)
+            ply_list = [tuple(results[i]) for i in range(results.shape[0])]
+            ply = np.array(ply_list,
+                         dtype=[('x', 'f4'), ('y', 'f4'), ('z', 'f4'),('r', 'u1'), ('g', 'u1'), ('b', 'u1'),('sem', 'i4'), ('ins', 'i4'), ('score', 'f4'),('ox', 'f4'), ('oy', 'f4'), ('oz', 'f4')])
+            
+            results_filename = os.path.join(os.path.dirname(file_path), 'results', raw_filestem+'_segmentation.ply')
+            with open(results_filename, mode='wb') as f:
+                PlyData([PlyElement.describe(ply, 'segmentation')], text=True).write(f)
 
             pc_xyzrgb = results[:,:6][np.newaxis,:,:]
             pc_xyzrgbsemins = results[:,:8][np.newaxis,:,:]

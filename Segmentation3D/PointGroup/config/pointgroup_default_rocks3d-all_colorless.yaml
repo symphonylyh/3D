@@ -13,7 +13,7 @@ DATA:
   ignore_label: -100
 
   input_channel: 3
-  scale: 100   # voxel_size = 1 / scale, scale 50(2cm)
+  scale: 50   # voxel_size = 1 / scale, scale 50(2cm), Note: for RR3 (about 0.6m by 0.6m), scale should be 100; for RR4 and RR3-RR4-Mix where the scene is larger (about 1.2m by 1.2m), scale should be 50. same applies to the score_scale
   batch_size: 1
   full_scale: [128, 512]
   max_npoint: 250000
@@ -42,7 +42,7 @@ TRAIN:
   fg_thresh: 0.75
   bg_thresh: 0.25
 
-  score_scale: 100 # the minimal voxel size is 2cm
+  score_scale: 50 # the minimal voxel size is 2cm
   score_fullscale: 14
   score_mode: 4 # mean
 
@@ -52,23 +52,23 @@ TRAIN:
 
 GROUP:
   ### point grouping
-  cluster_radius: 0.01
-  cluster_meanActive: 50
-  cluster_shift_meanActive: 300
-  cluster_npoint_thre: 50
+  cluster_radius: 0.008
+  cluster_meanActive: 50 #50
+  cluster_shift_meanActive: 100 #300
+  cluster_npoint_thre: 50 #50
 
   prepare_epochs: 10 #128
 
 TEST:
-  test_dataset: stockpile_testset
+  test_dataset: stockpile_testset_photo
   split: test
   test_epoch: 99
   test_workers: 16
   test_seed: 567
 
   TEST_NMS_THRESH: 0.3
-  TEST_SCORE_THRESH: 0.09
-  TEST_NPOINT_THRESH: 100
+  TEST_SCORE_THRESH: 0.4 # 0.09
+  TEST_NPOINT_THRESH: 100 #100 
 
   eval: False # True for val, False for test (no ground-truth)
   save_semantic: True
