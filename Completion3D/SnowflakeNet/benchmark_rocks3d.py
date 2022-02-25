@@ -15,7 +15,7 @@ from visualization.plot3d import Plot3DApp, Plot3DFigure, PointCloudVis as pcvis
 from visualization.vis_splitting import *
 
 class CompareShape:
-    def __init__(self, input_path, output_path, gt_path, snapshot_path):
+    def __init__(self, input_path, output_path, gt_path, snapshot_path, gt_spreadsheet_path):
         '''
         Module for comparing the partial shape (input), completed shape (output), and ground-truth shape (gt). Each input/output/gt_path contains models with the same filename.
         ''' 
@@ -23,10 +23,28 @@ class CompareShape:
         self.output_path = output_path
         self.gt_path = gt_path
         self.snapshot_path = snapshot_path
-    
+        self.gt_spreadsheet_path = gt_spreadsheet_path
+
         # get all file names
         self.files = [os.path.basename(f) for f in os.listdir(self.input_path)] # filenames
         self.filestems = [os.path.splitext(fn)[0].split('_', 1)[-1] for fn in self.files] # filestems by stripping the leading uuid and file extension
+
+        # read gt spreadsheets
+        rr3_part1 = pd.read_excel(os.path.join(self.gt_spreadsheet_path, 'RR3.xlsx'), sheet_name='Metashape Stats')
+        rr3_part2 = pd.read_excel(os.path.join(self.gt_spreadsheet_path, 'RR3.xlsx'), sheet_name='3D Stats')
+
+        rr4_part1 = pd.read_excel(os.path.join(self.gt_spreadsheet_path, 'RR4.xlsx'), sheet_name='Metashape Stats')
+        rr4_part2 = pd.read_excel(os.path.join(self.gt_spreadsheet_path, 'RR4.xlsx'), sheet_name='3D Stats')
+
+        rr3_part1 = rr3_part1.iloc[:, 1:3].dropna().to_numpy() # volume, area
+        rr3_part2 = rr3_part2.iloc[:, :].dropna().to_numpy() # ESD, abc, FER, Sphericity
+        gt_rr3 = np.concatenate((rr3_part2[:,:4], rr3_part1, rr3_part2[:,4:6]), axis=1)
+
+        rr4_part1 = rr4_part1.iloc[:, 1:3].dropna().to_numpy() # volume, area
+        rr4_part2 = rr4_part2.iloc[:, :].dropna().to_numpy() # ESD, abc, FER, Sphericity
+        gt_rr4 = np.concatenate((rr4_part2[:,:4], rr4_part1, rr4_part2[:,4:6]), axis=1)
+
+        self.gt_map = {'RR3': gt_rr3, 'RR4': gt_rr4}
 
     def load_shapes(self, file_id):
         ''' 
@@ -131,7 +149,7 @@ class CompareShape:
         o3d.visualization.draw_geometries_with_key_callbacks([path123_range], key_to_callback=key_to_callback, window_name="Path123_Range")
         # o3d.visualization.draw_geometries([path123_range], window_name="Path123_Range", point_show_normal=True)
 
-    def pcd_to_mesh(self, pcd, method='PS'):
+    def pcd_to_mesh(self, pcd, downsample=2048, method='PS'):
         '''
         Reconstruct point cloud to mesh. 
     
@@ -151,15 +169,19 @@ class CompareShape:
         m = ml.Mesh(pcd)
         ms = ml.MeshSet()
         ms.add_mesh(m, 'pcd')
+        ms.point_cloud_simplification(samplenum=downsample, exactnumflag=True)
         ms.compute_normals_for_point_sets()
         if method == 'BP':
             ms.surface_reconstruction_ball_pivoting()
         elif method == 'PS':
             ms.surface_reconstruction_screened_poisson()
+        elif method == 'CH':
+            ms.convex_hull()
         ms.close_holes()
 
         # Note: some mesh's normals are randomly inward/outward, we want it always be outward, so we check the volume (if volume is negative, it means the normals are inward)
-        if ms.compute_geometric_measures()['mesh_volume'] < 0:
+        measures = ms.compute_geometric_measures()
+        if 'mesh_volume' in measures.keys() and measures['mesh_volume'] < 0:
             ms.invert_faces_orientation(forceflip=True) 
         # ms.poisson_disk_sampling(samplenum=num_points_per_gt, exactnumflag=True) # in case we want to simplify the mesh
 
@@ -206,15 +228,30 @@ class CompareShape:
         '''
         # calculate geometric features: bbox length, volume and area
         measures = ms.compute_geometric_measures()
-        bbox = measures['bbox']
-        bbox_dim = (bbox.dim_x(), bbox.dim_y(), bbox.dim_z())
+        # bbox = measures['bbox']
+        # bbox_dim = (bbox.dim_x(), bbox.dim_y(), bbox.dim_z())
+        # bbox_dim = np.sort(bbox_dim)
+        # FER3D = bbox_dim[2] / bbox_dim[0]
+        # [IMPORTANT] for bbox, we should NOT use meshlab's axis-aligned bbox, instead we should use open3d's oriented bbox
+        pcd = ms.mesh(1).vertex_matrix()
+        bbox = o3d.geometry.OrientedBoundingBox.create_from_points(o3d.utility.Vector3dVector(pcd))
+        bbox_dim = bbox.extent 
         bbox_dim = np.sort(bbox_dim)
-        volume = measures['mesh_volume']
-        area = measures['surface_area']
-
-        ESD = (3/4 / np.pi * volume)**(1/3) * 2
         FER3D = bbox_dim[2] / bbox_dim[0]
-        Sphericity3D = (36*np.pi * volume**2)**(1/3) / area
+
+        valid = True
+        if 'mesh_volume' in measures.keys():
+            volume = measures['mesh_volume']
+            area = measures['surface_area']
+            ESD = (3/4 / np.pi * volume)**(1/3) * 2
+            Sphericity3D = (36*np.pi * volume**2)**(1/3) / area
+        else:
+            print('Problematic mesh, cannot calculate volume!')
+            valid = False
+            volume = 0
+            area = 0
+            ESD = 0
+            Sphericity3D = 0
         
         return {'ESD (cm)': ESD*1e2, 'a (cm)': bbox_dim[0]*1e2, 'b (cm)': bbox_dim[1]*1e2, 'c (cm)': bbox_dim[2]*1e2, 'Volume (cm^3)': volume*1e6, 'Area (cm^2)': area*1e4, 'FER3D': FER3D,  'Sphericity3D': Sphericity3D}
 
@@ -227,7 +264,7 @@ class CompareShape:
         '''
         fn = self.files[file_id]
         print(f"Dataset has {len(self.files)} samples, comparing sample {file_id}: {fn}")
-
+        # return
         # load point cloud
         pcd_partial, pcdc, pcd0, pcd1, pcd2, pcd3, pcd_gt = self.load_shapes(file_id)
 
@@ -240,12 +277,17 @@ class CompareShape:
             self.vis_splitting_paths(file_id, pcd1, pcd2, pcd3)
 
         # convert to mesh
-        mesh_complete = self.pcd_to_mesh(pcd3)
-        mesh_gt = self.pcd_to_mesh(pcd_gt)
+        mesh_complete = self.pcd_to_mesh(pcd3, downsample=2048)
+        # mesh_gt = self.pcd_to_mesh(pcd_gt)
 
         # compute geometric measures
         geometric_complete = self.geometric_measures(mesh_complete)
-        geometric_gt = self.geometric_measures(mesh_gt)
+        # geometric_gt = self.geometric_measures(mesh_gt)
+
+        # read gt properties from spreadsheet data
+        fields = (self.filestems[file_id]).split('_')
+        gt_entry = self.gt_map[fields[0]][int(fields[1])-1] # RRX_N
+        geometric_gt = {'ESD (cm)': gt_entry[0], 'a (cm)': gt_entry[1], 'b (cm)': gt_entry[2], 'c (cm)': gt_entry[3], 'Volume (cm^3)': gt_entry[4], 'Area (cm^2)': gt_entry[5], 'FER3D': gt_entry[6],  'Sphericity3D': gt_entry[7]}
 
         # print
         df_complete = pd.DataFrame.from_dict(geometric_complete, orient='index', columns=['Completion'])
@@ -258,7 +300,7 @@ class CompareShape:
         if save_mesh:
             mesh_name = self.filestems[file_id] 
             self.save_mesh(mesh_complete, mesh_name + '_complete.ply')
-            self.save_mesh(mesh_gt, mesh_name + '_gt.ply')
+            # self.save_mesh(mesh_gt, mesh_name + '_gt.ply')
         
         return df_complete, df_gt
 
@@ -291,9 +333,10 @@ class CompareShape:
         pred = pd.read_excel(spreadsheet, sheet_name='Completion')
         gt = pd.read_excel(spreadsheet, sheet_name='Ground-Truth')
 
-        row_index = [0,4,5,6,7]
-        row_name = [r'ESD (cm)', r'$Volume\ (cm^3)$', r'$Area\ (cm^2)$', r'$FER_{3D}$', r'$Sphericity_{3D}$']
-        plot_name = ['ESD.png', 'Volume.png', 'Area.png', 'FER3D.png', 'Sphericity3D.png']
+        row_index = [0,1,2,3,4,5,6,7]
+        row_name = [r'ESD (cm)', r'Shortest Dimension (cm)', r'Intermediate Dimension (cm)', r'Longest Dimension (cm)', r'$Volume\ (cm^3)$', r'$Area\ (cm^2)$', r'$FER_{3D}$', r'$Sphericity_{3D}$']
+        plot_name = ['ESD.png', 'a.png', 'b.png', 'c.png', 'Volume.png', 'Area.png', 'FER3D.png', 'Sphericity3D.png']
+        plot_xlim = [(7.5,17.5), (5,15), (10,20), (15,25), (500,1500), (400,800), (1,3), (0.5,1.0)]
 
         data_pred, data_gt, MAPE = [], [], []
         for row in row_index:
@@ -310,16 +353,28 @@ class CompareShape:
             fig = plt.figure()
             markersize = 3
             pass_point = np.min(data_gt[i] * 0.95)
-            plt.axline((pass_point, pass_point), slope=1, linestyle='--', linewidth=1, color='k', label='Reference Line')
-            plt.plot(data_gt[i], data_pred[i], 'o', markerfacecolor='none', markersize=markersize)
+            plt.axline((pass_point, pass_point), slope=1, linestyle='-', linewidth=1, color='k', label='Reference Line', zorder=2)
+            error_line_pass_point = (1,1) if 'FER3D' in name else (0,0) 
+            plt.axline(error_line_pass_point, slope=0.9, linestyle=(0,(5,5)), linewidth=1, color='g', alpha=0.5, label="10% Error Line", zorder=2)
+            plt.axline(error_line_pass_point, slope=1.1, linestyle=(0,(5,5)), linewidth=1, color='g', alpha=0.5, label="10% Error Line", zorder=2)
+            plt.axline(error_line_pass_point, slope=0.8, linestyle=(0,(5,5)), linewidth=1, color='b', alpha=0.5, label="20% Error Line", zorder=2)
+            plt.axline(error_line_pass_point, slope=1.2, linestyle=(0,(5,5)), linewidth=1, color='b', alpha=0.5, label="20% Error Line", zorder=2) # loosely dashes
+            plt.plot(data_gt[i], data_pred[i], 'o', markerfacecolor='none', markersize=markersize, zorder=3)
             plt.gca().set_aspect('equal')
 
-            plt.text(0.7,0.2,f'MAPE={MAPE[i]:.1f}%', transform=plt.gca().transAxes, color='black', bbox=dict(facecolor='white', edgecolor='black'))
+            plt.text(0.7,0.1,f'MAPE={MAPE[i]:.1f}%', transform=plt.gca().transAxes, color='black', bbox=dict(facecolor='white', edgecolor='black'))
 
+            plt.ylim(plot_xlim[i])
+            plt.xlim(plot_xlim[i])
             plt.xlabel(row_name[i]+r', Ground-Truth')
             plt.ylabel(row_name[i]+r', Prediction')
             plt.grid()
-            fig.savefig(os.path.join(self.snapshot_path, name), bbox_inches='tight', dpi=300)
+
+            handles, labels = plt.gca().get_legend_handles_labels() # for merging same labels
+            by_label = dict(zip(labels, handles))
+            plt.legend(by_label.values(), by_label.keys(), loc='upper left')
+            
+            fig.savefig(os.path.join(self.snapshot_path, name), bbox_inches='tight', dpi=300, transparent=True)
             # plt.show()
             plt.close(fig)
 
@@ -328,11 +383,12 @@ if __name__ == '__main__':
     output_path = './datasets/rocks3d/test/benchmark/001/'
     gt_path = './datasets/rocks3d/test/gt/001/'
     snapshot_path = './datasets/rocks3d/vis/completion/'
+    gt_spreadsheet_path = 'H:/RockScan'
 
-    c = CompareShape(input_path, output_path, gt_path, snapshot_path)
+    c = CompareShape(input_path, output_path, gt_path, snapshot_path, gt_spreadsheet_path)
 
     # for debug checking one file at a time
-    # c.compare_one(file_id=183, vis=False, save_mesh=True, debug_print=True)
+    # c.compare_one(file_id=4, vis=True, save_mesh=False, debug_print=True)
     
     save_spreadsheet_name = 'shape_completion_comparison.xlsx'
 

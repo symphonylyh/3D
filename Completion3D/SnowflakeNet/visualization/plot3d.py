@@ -264,9 +264,36 @@ For point cloud drawing, if the point cloud has been divided into blocks and loa
     - Dataloader has shuffle. Even if you turn off shuffle, the first reason still matters.
 '''
 class PointCloudVis:
-    
     @staticmethod
-    def get_default_material_pointcloud(point_size=0.1):
+    def rotation_matrix_from_vectors(vec1, vec2):
+        """ Find the rotation matrix that aligns vec1 to vec2
+        :param vec1: A 3d "source" vector
+        :param vec2: A 3d "destination" vector
+        :return mat: A transform matrix (3x3) which when applied to vec1, aligns it with vec2.
+        
+        Ref: https://stackoverflow.com/questions/45142959/calculate-rotation-matrix-to-align-two-vectors-in-3d-space
+        https://math.stackexchange.com/questions/180418/calculate-rotation-matrix-to-align-vector-a-to-vector-b-in-3d/476311#476311
+        """
+        a, b = (vec1 / np.linalg.norm(vec1)).reshape(3), (vec2 / np.linalg.norm(vec2)).reshape(3)
+        v = np.cross(a, b)
+        c = np.dot(a, b)
+        s = np.linalg.norm(v)
+        kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
+        rotation_matrix = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
+        return rotation_matrix
+        
+    @staticmethod
+    def get_default_material_mesh():
+        '''
+        get a default material that can be used to render different geometries
+        see Material fields at: http://www.open3d.org/docs/release/python_api/open3d.visualization.rendering.Material.html. For example, mat.base_color = (0,0,1,1)
+        '''
+        mat = rendering.Material()
+        mat.shader = "defaultLit"
+        return mat
+
+    @staticmethod
+    def get_default_material_pointcloud(point_size=3):
         '''
         get a default material that can be used to render different geometries
         see Material fields at: http://www.open3d.org/docs/release/python_api/open3d.visualization.rendering.Material.html. For example, mat.base_color = (0,0,1,1)
@@ -277,9 +304,10 @@ class PointCloudVis:
         return mat
    
     @staticmethod
-    def get_default_material_lineset():
+    def get_default_material_lineset(line_width=1):
         mat = rendering.Material()
         mat.shader = "unlitLine"
+        mat.line_width = line_width
         return mat
 
     @staticmethod
@@ -292,7 +320,7 @@ class PointCloudVis:
         return colors
 
     @staticmethod
-    def draw_pc_xyz(subfigure_handle, pc_xyz, color=None, point_size=0.1):
+    def draw_pc_xyz(subfigure_handle, pc_xyz, color=None, point_size=3):
         '''
         Draw points coordinates with uniform color
             subfigure_handle: Plot3DSubfigure() object
@@ -307,7 +335,7 @@ class PointCloudVis:
         plot_handle.setup_camera(60, plot_handle.scene.bounding_box, plot_handle.scene.bounding_box.get_center())
 
     @staticmethod
-    def draw_pc_raw(subfigure_handle, pc_xyzrgb):
+    def draw_pc_raw(subfigure_handle, pc_xyzrgb, point_size=3):
         '''
         [Block data] draw points in all blocks using its own point color
             subfigure_handle: Plot3DSubfigure() object
@@ -323,11 +351,11 @@ class PointCloudVis:
         else:
             pc.colors = o3d.utility.Vector3dVector(pc_xyzrgb[:, 3:])
         
-        plot_handle.scene.add_geometry("Raw Points", pc, PointCloudVis.get_default_material_pointcloud())
+        plot_handle.scene.add_geometry("Raw Points", pc, PointCloudVis.get_default_material_pointcloud(point_size=point_size))
         plot_handle.setup_camera(60, plot_handle.scene.bounding_box, plot_handle.scene.bounding_box.get_center())
 
     @staticmethod
-    def draw_pc_by_block(subfigure_handle, pc_xyzrgb, show_bbox=True, bbox_color='color'):
+    def draw_pc_by_block(subfigure_handle, pc_xyzrgb, show_bbox=True, bbox_color='color', point_size=3, line_width=1):
         '''    
         [Block data] draw points colored by block (each block displayed with a different color)
             subfigure_handle: Plot3DSubfigure() object
@@ -354,7 +382,7 @@ class PointCloudVis:
                     bbox_wireframe.paint_uniform_color((0,0,0))
                 else:
                     bbox_wireframe.paint_uniform_color(colors[block_i])
-                plot_handle.scene.add_geometry(f"Block {block_i}", bbox_wireframe, PointCloudVis.get_default_material_lineset())
+                plot_handle.scene.add_geometry(f"Block {block_i}", bbox_wireframe, PointCloudVis.get_default_material_lineset(line_width=line_width))
 
         pc_xyzrgb = pc_xyzrgb.reshape(-1,pc_xyzrgb.shape[-1]) # flatten all blocks
         
@@ -364,11 +392,11 @@ class PointCloudVis:
         else:
             pc.colors = o3d.utility.Vector3dVector(pc_xyzrgb[:, 3:])
         
-        plot_handle.scene.add_geometry("Points by Block", pc, PointCloudVis.get_default_material_pointcloud())
+        plot_handle.scene.add_geometry("Points by Block", pc, PointCloudVis.get_default_material_pointcloud(point_size=point_size))
         plot_handle.setup_camera(60, plot_handle.scene.bounding_box, plot_handle.scene.bounding_box.get_center())
 
     @staticmethod
-    def draw_pc_by_semins(subfigure_handle, pc_xyzrgbsemins, color_code='instance',sem_dict=None, show_legend=False, show_bbox=True, bbox_axis_align=True, bbox_color='black', show_instance_label=False):
+    def draw_pc_by_semins(subfigure_handle, pc_xyzrgbsemins, color_code='instance',sem_dict=None, show_legend=False, show_bbox=True, bbox_axis_align=True, bbox_color='black', show_instance_label=False, point_size=3, line_width=1):
         '''
         [Block data] draw points colored by semantic/instance label
             - 'semantic' mode: each semantic class displayed in a different color, option to show legend aside. -1 means not a class, colored as black
@@ -447,13 +475,15 @@ class PointCloudVis:
                         bbox_wireframe = o3d.geometry.LineSet.create_from_oriented_bounding_box(bbox)
 
                     if bbox_color == 'black':
+                        bbox.color = (0,0,0)
                         bbox_wireframe.paint_uniform_color((0,0,0))
                     else:
+                        bbox.color = ins_colors[id]
                         bbox_wireframe.paint_uniform_color(ins_colors[id])
                     
-                    # plot_handle.scene.add_geometry(f"Instance BBox {id}", bbox_wireframe, PointCloudVis.get_default_material_lineset())
+                    # plot_handle.scene.add_geometry(f"Instance BBox {id}", bbox_wireframe, PointCloudVis.get_default_material_lineset(line_width=line_width))
                     # after 0.13.0, we can directly draw bbox instead of converting to lineset
-                    plot_handle.scene.add_geometry(f"Instance BBox {id}", bbox, PointCloudVis.get_default_material_lineset())
+                    plot_handle.scene.add_geometry(f"Instance BBox {id}", bbox, PointCloudVis.get_default_material_lineset(line_width=line_width))
 
                     if show_instance_label:
                         
@@ -465,17 +495,18 @@ class PointCloudVis:
                         sem_class = sem_class[0]
                         if sem_dict is not None:
                             sem_class = sem_dict[sem_class]
-                        plot_handle.add_3d_label(bbox.get_center(), f"{id}: {sem_class}")
+                        # plot_handle.add_3d_label(bbox.get_center(), f"{id}: {sem_class}")
+                        plot_handle.add_3d_label(bbox.get_center(), f"i{id}")
             if show_instance_label:
                 print("For the instance text label to display properly, make sure there is no other subplots in this window!")
 
         pc.colors = o3d.utility.Vector3dVector(pc_xyzrgb[:, 3:])
-        plot_handle.scene.add_geometry("Points by SemIns", pc, PointCloudVis.get_default_material_pointcloud())
+        plot_handle.scene.add_geometry("Points by SemIns", pc, PointCloudVis.get_default_material_pointcloud(point_size=point_size))
         plot_handle.setup_camera(60, plot_handle.scene.bounding_box, plot_handle.scene.bounding_box.get_center())    
     
     
     @staticmethod
-    def draw_pc_by_lidar(subfigure_handle, pc_xyzrgblidar, lidar_positions, show_rays=False, show_rays_lidar=None):
+    def draw_pc_by_lidar(subfigure_handle, pc_xyzrgblidar, lidar_positions, show_rays=False, show_rays_lidar=None, point_size=3, line_width=0.1):
         '''    
         [Flatten data] draw points colored by LiDAR (points sensed by each LiDAR displayed with a different color)
             subfigure_handle: Plot3DSubfigure() object
@@ -495,16 +526,37 @@ class PointCloudVis:
             if len(lidar_ind) == 0:
                 continue
 
-            # assign per-lidar color
-            pc_xyzrgblidar[lidar_ind, 3:6] = colors[lidar_i]
+            # assign per-lidar color (non-plot lidar shows gray)
+            if lidar_i in show_rays_lidar:
+                pc_xyzrgblidar[lidar_ind, 3:6] = colors[lidar_i]
+            else:
+                pc_xyzrgblidar[lidar_ind, 3:6] = (0.7,0.7,0.7)
 
             # plot LiDARs
-            sphere_lidar = o3d.geometry.TriangleMesh.create_tetrahedron(radius=0.1)
-            sphere_lidar.paint_uniform_color(colors[lidar_i])
-            sphere_lidar.translate(lidar_positions[lidar_i])
-            plot_handle.scene.add_geometry(f"LiDAR {lidar_i}", sphere_lidar, PointCloudVis.get_default_material_pointcloud())
-            plot_handle.add_3d_label(lidar_positions[lidar_i], f"LiDAR {lidar_i}")
-
+            # sphere_lidar = o3d.geometry.TriangleMesh.create_tetrahedron(radius=0.1)
+            # sphere_lidar.paint_uniform_color(colors[lidar_i])
+            # sphere_lidar.translate(lidar_positions[lidar_i])
+            # plot_handle.scene.add_geometry(f"LiDAR {lidar_i}", sphere_lidar, PointCloudVis.get_default_material_pointcloud(point_size=point_size))
+            cam = o3d.geometry.TriangleMesh.create_sphere(radius=0.03)
+            cam.compute_vertex_normals()
+            cam.translate(translation=lidar_positions[lidar_i,:3], relative=False)
+            cam.paint_uniform_color(np.array(colors[lidar_i]))
+            plot_handle.scene.add_geometry(f"LiDAR {lidar_i} sphere", cam, PointCloudVis.get_default_material_mesh())  
+            arrow_len = 0.2 # default cylinder height is 5.0, so the scale factor is
+            scale_factor = arrow_len / 5.0
+            arrow = o3d.geometry.TriangleMesh.create_arrow(cylinder_radius=0.25, cone_radius=1.0)
+            arrow.compute_vertex_normals() # this allows Phong shading!
+            direction = np.array([0,0,0])-lidar_positions[lidar_i,:3]
+            direction /= np.linalg.norm(direction)
+            R = PointCloudVis.rotation_matrix_from_vectors(np.array([0,0,1]), direction) # compute relative rotation from the default direction (0,0,1) to the lookat vector direction
+            arrow.rotate(R)
+            arrow.scale(scale=scale_factor, center=np.array([0,0,0]))
+            arrow.translate(translation=lidar_positions[lidar_i,:3] + direction * arrow_len/2, relative=False)
+            arrow.paint_uniform_color(colors[lidar_i])
+            plot_handle.scene.add_geometry(f"LiDAR {lidar_i} arrow", arrow, PointCloudVis.get_default_material_mesh())
+            # plot lidar labels
+            plot_handle.add_3d_label(lidar_positions[lidar_i], f"L{lidar_i}")
+   
             # plot rays
             if show_rays:
                 if show_rays_lidar is None or lidar_i in show_rays_lidar:
@@ -514,8 +566,7 @@ class PointCloudVis:
                     rays.points = o3d.utility.Vector3dVector(line_pts)
                     rays.lines = o3d.utility.Vector2iVector(line_indices)
                     rays.paint_uniform_color(colors[lidar_i])
-                    mat = PointCloudVis.get_default_material_lineset()
-                    mat.line_width = 0.1
+                    mat = PointCloudVis.get_default_material_lineset(line_width=line_width)
                     plot_handle.scene.add_geometry(f"LiDAR {lidar_i} Rays", rays, mat)
 
         pc.points = o3d.utility.Vector3dVector(pc_xyzrgblidar[:, :3]) # from numpy to o3d format
@@ -524,5 +575,5 @@ class PointCloudVis:
         else:
             pc.colors = o3d.utility.Vector3dVector(pc_xyzrgblidar[:, 3:6])
         
-        plot_handle.scene.add_geometry("Points by LiDAR", pc, PointCloudVis.get_default_material_pointcloud())
+        plot_handle.scene.add_geometry("Points by LiDAR", pc, PointCloudVis.get_default_material_pointcloud(point_size=point_size))
         plot_handle.setup_camera(60, plot_handle.scene.bounding_box, plot_handle.scene.bounding_box.get_center())

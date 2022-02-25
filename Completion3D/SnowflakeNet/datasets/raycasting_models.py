@@ -178,7 +178,7 @@ class RayCastingModel:
             # suppose (x,y,z) is a point on the circle with radius r
             # (x,y,z) = (x0,y0,z0) + rcos(t)*u + rsin(t)*v, where u,v are orthonormal basis of the plane
             # to find orthonormal basis, we can (a) find two arbitrary linearly indenpendent vectors and do Gram-Schmidt, or (b) find one arbitrary vector and cross product with normal.
-            # see details in note, here we used (b)
+            # see details in OneNote, here we used (b)
             
             # find orthonormal basis
             # find non-zero field in the normal (a,b,c):

@@ -78,5 +78,6 @@ dataset/primitives3d/*
 dataset/primitives3d_colorless/*
 !dataset/primitives3d_colorless/*.py
 
+*.ply
 
 

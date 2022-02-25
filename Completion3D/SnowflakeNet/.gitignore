@@ -72,6 +72,6 @@ datasets/*
 !datasets/*.json
 !datasets/*.txt
 
-
+*.ply
 
 

@@ -162,3 +162,9 @@ File types: Binary (compact, fast read speed) and ASCII.
 Note that Unity uses a left-handed coordinate system (X-forward, Y-up, Z-left) while other common software like Blender & Meshlab & Open3D all use a right-handed coordinate system (X-forward, Y-up, Z-right). To align this, we negate the Z value when exporting the PLY (including points and LiDAR positions). Later on we will subtract all XYZ coordinates by the minimum values such that the entire point cloud will be shifted to start from (0,0,0), and everything looks the same as in Unity.
 
 Use `plot3d_example_unity.py` to visualize the data. `prepare_synthetic_data_h5.py` to convert PLY to h5 format.
+
+
+
+Note: there is another way of synthesis. Use [hidden point removal](http://www.open3d.org/docs/latest/tutorial/Basic/pointcloud.html), can check this [paper](http://www.weizmann.ac.il/math/ronen/sites/math.ronen/files/uploads/katz_tal_basri_-_direct_visibility_of_point_sets.pdf). If in Unity we can first generate an omniscient and omnipotent point cloud (i.e. each instance has full point cloud), then we can do hidden point removal at each LiDAR location and get the stockpile point cloud. This is similar to raycasting. However, it can give one important information -- each partial shape, we have its complete shape as well. This naturally forms the dataset for shape completion. And, this dataset better represents the partial observation in reality than our raycasting design. 
+
+Also, when developing the software, we can check Open3D's segment_plane() for auto removal of the ground plane!

@@ -44,7 +44,7 @@ __C.CONST.N_INPUT_POINTS                         = 2048
 __C.DIR                                          = edict()
 __C.DIR.OUT_PATH                                 = 'exp'
 __C.CONST.DEVICE                                 = '0'
-__C.CONST.WEIGHTS                                = './exp/checkpoints/2021-10-15T03-30-37/ckpt-best.pth' # 'ckpt-best.pth'  # specify a path to run test and inference, comment this line during training unless we want to resume training
+__C.CONST.WEIGHTS                                = './exp/checkpoints/2021-10-18T21-31-57/ckpt-best.pth' # 'ckpt-best.pth'  # specify a path to run test and inference, comment this line during training unless we want to resume training
 
 #
 # Memcached
