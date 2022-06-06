@@ -333,7 +333,7 @@ if __name__ == '__main__':
     model_path = './exp/checkpoints/2021-10-15T03-30-37/ckpt-best.pth'
 
     inspection_mode = True # for inspection, it just displays the interactive window for me to identify the instance correspondence to ground-truth, without saving any results
-    sp_threshold_mode = True # show shape percentage thresholding effect
+    sp_threshold_mode = False # show shape percentage thresholding effect
     
     if not inspection_mode:
     # load trained shape completion model 
